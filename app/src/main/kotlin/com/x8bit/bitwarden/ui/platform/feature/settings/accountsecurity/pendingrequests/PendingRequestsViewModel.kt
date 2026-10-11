@@ -2,7 +2,6 @@ package com.x8bit.bitwarden.ui.platform.feature.settings.accountsecurity.pending
 
 import android.os.Build
 import android.os.Parcelable
-import androidx.annotation.ChecksSdkIntAtLeast
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.bitwarden.core.data.manager.BuildInfoManager
@@ -232,13 +231,14 @@ data class PendingRequestsState(
 ) : Parcelable {
 
     /**
-     * Indicates that the bottom sheet should be hidden.
+     * Indicates that the bottom sheet should be hidden. It asks for notifications, so besides
+     * when the user has dismissed it, it is hidden wherever there is nothing to ask: in F-Droid
+     * builds, which cannot receive them, and before Android made them a permission.
      */
-    @get:ChecksSdkIntAtLeast(parameter = Build.VERSION_CODES.TIRAMISU)
     val hideBottomSheet: Boolean
-        get() = internalHideBottomSheet &&
-            !isFdroid &&
-            isBuildVersionAtLeast(Build.VERSION_CODES.TIRAMISU)
+        get() = internalHideBottomSheet ||
+            isFdroid ||
+            !isBuildVersionAtLeast(Build.VERSION_CODES.TIRAMISU)
 
     /**
      * Indicates that the pull-to-refresh should be enabled in the UI.

@@ -1,10 +1,12 @@
 package com.x8bit.bitwarden.ui.platform.feature.settings.accountsecurity.pendingrequests
 
+import android.os.Build
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import com.bitwarden.core.data.manager.BuildInfoManager
 import com.bitwarden.core.data.repository.util.bufferedMutableSharedFlow
 import com.bitwarden.core.data.util.toFormattedDateTimeStyle
+import com.bitwarden.core.util.isBuildVersionAtLeast
 import com.bitwarden.ui.platform.base.BaseViewModelTest
 import com.bitwarden.ui.platform.components.snackbar.model.BitwardenSnackbarData
 import com.bitwarden.ui.platform.manager.snackbar.SnackbarRelayManager
@@ -26,6 +28,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Clock
@@ -64,11 +68,14 @@ class PendingRequestsViewModelTest : BaseViewModelTest() {
     @BeforeEach
     fun setUp() {
         mockkStatic(TemporalAccessor::toFormattedDateTimeStyle)
+        mockkStatic(::isBuildVersionAtLeast)
+        every { isBuildVersionAtLeast(Build.VERSION_CODES.TIRAMISU) } returns true
     }
 
     @AfterEach
     fun tearDown() {
         unmockkStatic(TemporalAccessor::toFormattedDateTimeStyle)
+        unmockkStatic(::isBuildVersionAtLeast)
     }
 
     @Test
@@ -240,6 +247,32 @@ class PendingRequestsViewModelTest : BaseViewModelTest() {
         val viewModel = createViewModel()
         viewModel.trySendAction(PendingRequestsAction.HideBottomSheet)
         assertEquals(DEFAULT_STATE.copy(internalHideBottomSheet = true), viewModel.stateFlow.value)
+    }
+
+    @Test
+    fun `hideBottomSheet should be false until the bottom sheet is dismissed`() {
+        val viewModel = createViewModel()
+        assertFalse(viewModel.stateFlow.value.hideBottomSheet)
+
+        viewModel.trySendAction(PendingRequestsAction.HideBottomSheet)
+
+        assertTrue(viewModel.stateFlow.value.hideBottomSheet)
+    }
+
+    @Test
+    fun `hideBottomSheet should be true in F-Droid builds`() {
+        every { buildInfoManager.isFdroid } returns true
+        val viewModel = createViewModel(state = null)
+
+        assertTrue(viewModel.stateFlow.value.hideBottomSheet)
+    }
+
+    @Test
+    fun `hideBottomSheet should be true when notifications are not a permission`() {
+        every { isBuildVersionAtLeast(Build.VERSION_CODES.TIRAMISU) } returns false
+        val viewModel = createViewModel()
+
+        assertTrue(viewModel.stateFlow.value.hideBottomSheet)
     }
 
     @Test

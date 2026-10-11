@@ -186,6 +186,7 @@ jobs:
         run: |
           ./gradlew :app:testStandardDebugUnitTest \
             --tests "com.x8bit.bitwarden.ui.platform.feature.settings.other.*" \
+            --tests "com.x8bit.bitwarden.ui.platform.feature.settings.accountsecurity.pendingrequests.*" \
             --tests "com.x8bit.bitwarden.data.platform.manager.network.NetworkConnectionManagerTest" \
             --tests "com.x8bit.bitwarden.data.platform.manager.localvault.*" \
             --tests "com.x8bit.bitwarden.data.platform.datasource.disk.LocalVaultDiskSourceTest"
