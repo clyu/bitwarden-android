@@ -1,5 +1,7 @@
 package com.x8bit.bitwarden.ui.platform.feature.settings.other
 
+import android.app.Activity
+import android.content.Intent
 import android.content.res.Resources
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -27,6 +29,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -39,11 +42,14 @@ import com.bitwarden.ui.platform.components.dialog.BitwardenLoadingDialog
 import com.bitwarden.ui.platform.components.dialog.BitwardenTwoButtonDialog
 import com.bitwarden.ui.platform.components.dropdown.BitwardenMultiSelectButton
 import com.bitwarden.ui.platform.components.model.CardStyle
+import com.bitwarden.ui.platform.components.row.BitwardenTextRow
 import com.bitwarden.ui.platform.components.scaffold.BitwardenScaffold
 import com.bitwarden.ui.platform.components.snackbar.BitwardenSnackbarHost
 import com.bitwarden.ui.platform.components.snackbar.model.rememberBitwardenSnackbarHostState
 import com.bitwarden.ui.platform.components.toggle.BitwardenSwitch
 import com.bitwarden.ui.platform.components.util.rememberVectorPainter
+import com.bitwarden.ui.platform.composition.LocalIntentManager
+import com.bitwarden.ui.platform.manager.IntentManager
 import com.bitwarden.ui.platform.resource.BitwardenDrawable
 import com.bitwarden.ui.platform.resource.BitwardenString
 import com.bitwarden.ui.platform.theme.BitwardenTheme
@@ -59,12 +65,24 @@ import kotlinx.collections.immutable.toImmutableList
 fun OtherScreen(
     onNavigateBack: () -> Unit,
     viewModel: OtherViewModel = hiltViewModel(),
+    intentManager: IntentManager = LocalIntentManager.current,
 ) {
     val state by viewModel.stateFlow.collectAsStateWithLifecycle()
     val snackbarHostState = rememberBitwardenSnackbarHostState()
+    val vaultFolderLauncher = intentManager.getActivityResultLauncher { activityResult ->
+        activityResult
+            .takeIf { it.resultCode == Activity.RESULT_OK }
+            ?.data
+            ?.data
+            ?.let { viewModel.trySendAction(OtherAction.VaultFolderSelect(uri = it)) }
+    }
     EventsEffect(viewModel = viewModel) { event ->
         when (event) {
             OtherEvent.NavigateBack -> onNavigateBack.invoke()
+            OtherEvent.NavigateToSelectVaultFolder -> {
+                vaultFolderLauncher.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE))
+            }
+
             is OtherEvent.ShowSnackbar -> snackbarHostState.showSnackbar(snackbarData = event.data)
         }
     }
@@ -102,6 +120,7 @@ fun OtherScreen(
             onScreenCaptureChange = {
                 viewModel.trySendAction(OtherAction.AllowScreenCaptureToggle(it))
             },
+            onVaultFolderClick = { viewModel.trySendAction(OtherAction.VaultFolderClick) },
             modifier = Modifier.fillMaxSize(),
         )
     }
@@ -115,6 +134,7 @@ private fun OtherContent(
     onSyncClick: () -> Unit,
     onClipboardFrequencyChange: (ClearClipboardFrequency) -> Unit,
     onScreenCaptureChange: (Boolean) -> Unit,
+    onVaultFolderClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -191,6 +211,26 @@ private fun OtherContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .testTag(tag = "AllowScreenCaptureSwitch")
+                .standardHorizontalMargin(),
+        )
+
+        Spacer(modifier = Modifier.height(height = 8.dp))
+
+        BitwardenTextRow(
+            text = stringResource(id = BitwardenString.vault_folder),
+            description = AnnotatedString(
+                text = state.vaultFolderName
+                    ?.let { stringResource(id = BitwardenString.your_vault_is_kept_in_x, it) }
+                    ?: stringResource(
+                        id = BitwardenString
+                            .your_vault_is_kept_in_this_apps_storage_choose_a_folder_to_keep_it,
+                    ),
+            ),
+            onClick = onVaultFolderClick,
+            cardStyle = CardStyle.Full,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(tag = "VaultFolderRow")
                 .standardHorizontalMargin(),
         )
 

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="vault_folder">Vault folder</string>
+    <string name="your_vault_is_kept_in_x">Your vault is kept in %1$s.</string>
+    <string name="your_vault_is_kept_in_this_apps_storage_choose_a_folder_to_keep_it">Your vault is kept in this app’s storage. Choose a folder to keep it where you can back it up or sync it with your other devices.</string>
+    <string name="log_out_of_all_accounts_before_choosing_a_different_vault_folder">Log out of all accounts before choosing a different vault folder.</string>
+    <string name="copying_your_vault">Copying your vault…</string>
+    <string name="the_folder_could_not_be_used_choose_a_different_folder">The folder could not be used. Choose a different folder.</string>
+</resources>

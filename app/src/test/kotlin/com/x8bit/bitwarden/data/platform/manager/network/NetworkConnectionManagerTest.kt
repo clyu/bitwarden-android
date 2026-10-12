@@ -19,7 +19,6 @@ import io.mockk.unmockkConstructor
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -61,59 +60,21 @@ class NetworkConnectionManagerTest {
     }
 
     @Test
-    fun `isNetworkConnected should return false if no active network`() {
+    fun `isNetworkConnected should return true if no active network`() {
         every { connectivityManager.activeNetwork } returns null
         every { connectivityManager.getNetworkCapabilities(any()) } returns null
-        assertFalse(networkConnectionManager.isNetworkConnected)
-    }
-
-    @Test
-    fun `isNetworkConnected should return false if active network has no Internet capabilities`() {
-        val network: Network = mockk()
-        val networkCapabilities: NetworkCapabilities = mockk {
-            every { hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) } returns false
-        }
-        every { connectivityManager.activeNetwork } returns network
-        every { connectivityManager.getNetworkCapabilities(network) } returns networkCapabilities
-        assertFalse(networkConnectionManager.isNetworkConnected)
-    }
-
-    @Test
-    fun `isNetworkConnected should return true if active network has Internet capabilities`() {
-        val network: Network = mockk()
-        val networkCapabilities: NetworkCapabilities = mockk {
-            every { hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) } returns true
-        }
-        every { connectivityManager.activeNetwork } returns network
-        every { connectivityManager.getNetworkCapabilities(network) } returns networkCapabilities
         assertTrue(networkConnectionManager.isNetworkConnected)
     }
 
     @Test
-    fun `isNetworkConnectedFlow should emit changes to the network state`() = runTest {
-        val network = mockk<Network>()
-        val capabilities = mockk<NetworkCapabilities> {
-            every { signalStrength } returns -75
-            every { hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) } returns true
-            every { hasTransport(NetworkCapabilities.TRANSPORT_WIFI) } returns false
-            every { hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) } returns true
-        }
-        every { connectivityManager.activeNetwork } returns network
-
+    fun `isNetworkConnectedFlow should not emit changes to the network state`() = runTest {
         networkConnectionManager
             .isNetworkConnectedFlow
             .test {
-                assertFalse(awaitItem())
-
-                every { connectivityManager.getNetworkCapabilities(network) } returns capabilities
-                networkCallback.captured.onLost(mockk())
                 assertTrue(awaitItem())
 
-                every {
-                    capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                } returns false
-                networkCallback.captured.onLinkPropertiesChanged(mockk(), mockk())
-                assertFalse(awaitItem())
+                networkCallback.captured.onLost(mockk())
+                expectNoEvents()
             }
     }
 

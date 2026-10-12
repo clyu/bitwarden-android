@@ -13,6 +13,7 @@ import com.x8bit.bitwarden.data.platform.manager.model.NetworkConnection
 import com.x8bit.bitwarden.data.platform.manager.model.NetworkSignalStrength
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -48,22 +49,12 @@ class NetworkConnectionManagerImpl(
         )
     }
 
+    // The vault is kept on the device and not on a server, so everything that asks whether it
+    // can be reached is told that it can, whatever the state of the network is.
     override val isNetworkConnected: Boolean
-        get() = connectivityManager
-            .getNetworkCapabilities(connectivityManager.activeNetwork)
-            ?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-            ?: false
+        get() = true
 
-    override val isNetworkConnectedFlow: StateFlow<Boolean> =
-        networkChangeCallback
-            .connectionChangeFlow
-            .map { isNetworkConnected }
-            .distinctUntilChanged()
-            .stateIn(
-                scope = unconfinedScope,
-                started = SharingStarted.Eagerly,
-                initialValue = isNetworkConnected,
-            )
+    override val isNetworkConnectedFlow: StateFlow<Boolean> = MutableStateFlow(true)
 
     override val networkConnection: NetworkConnection
         get() = connectivityManager

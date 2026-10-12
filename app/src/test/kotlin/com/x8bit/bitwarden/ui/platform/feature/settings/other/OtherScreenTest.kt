@@ -12,6 +12,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import com.bitwarden.core.data.repository.util.bufferedMutableSharedFlow
 import com.bitwarden.ui.platform.components.snackbar.model.BitwardenSnackbarData
+import com.bitwarden.ui.platform.manager.IntentManager
 import com.bitwarden.ui.util.asText
 import com.bitwarden.ui.util.assertNoDialogExists
 import com.x8bit.bitwarden.data.platform.repository.model.ClearClipboardFrequency
@@ -34,10 +35,13 @@ class OtherScreenTest : BitwardenComposeTest() {
         every { eventFlow } returns mutableEventFlow
         every { stateFlow } returns mutableStateFlow
     }
+    private val intentManager = mockk<IntentManager>(relaxed = true)
 
     @Before
     fun setup() {
-        setContent {
+        setContent(
+            intentManager = intentManager,
+        ) {
             OtherScreen(
                 viewModel = viewModel,
                 onNavigateBack = { haveCalledNavigateBack = true },
@@ -144,6 +148,29 @@ class OtherScreenTest : BitwardenComposeTest() {
     }
 
     @Test
+    fun `on vault folder row click should send VaultFolderClick`() {
+        composeTestRule.onNodeWithText("Vault folder").performScrollTo().performClick()
+        verify { viewModel.trySendAction(OtherAction.VaultFolderClick) }
+    }
+
+    @Test
+    fun `vault folder row should display where the vault is kept according to state`() {
+        composeTestRule
+            .onNodeWithText(
+                text = "Your vault is kept in this app’s storage. Choose a folder to keep it " +
+                    "where you can back it up or sync it with your other devices.",
+                useUnmergedTree = true,
+            )
+            .assertExists()
+
+        mutableStateFlow.update { it.copy(vaultFolderName = "primary:Vault") }
+
+        composeTestRule
+            .onNodeWithText(text = "Your vault is kept in primary:Vault.", useUnmergedTree = true)
+            .assertExists()
+    }
+
+    @Test
     fun `on NavigateBack should call onNavigateBack`() {
         mutableEventFlow.tryEmit(OtherEvent.NavigateBack)
         assertTrue(haveCalledNavigateBack)
@@ -203,5 +230,6 @@ private val DEFAULT_STATE = OtherState(
     allowSyncOnRefresh = false,
     clearClipboardFrequency = ClearClipboardFrequency.NEVER,
     lastSyncTime = "5/14/2023 4:52 PM",
+    vaultFolderName = null,
     dialogState = null,
 )

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="vault_folder">密碼庫資料夾</string>
+    <string name="your_vault_is_kept_in_x">您的密碼庫存放於 %1$s。</string>
+    <string name="your_vault_is_kept_in_this_apps_storage_choose_a_folder_to_keep_it">您的密碼庫存放於此應用程式的儲存空間。選擇一個資料夾來存放，即可自行備份或與其他裝置同步。</string>
+    <string name="log_out_of_all_accounts_before_choosing_a_different_vault_folder">請先登出所有帳號，再選擇其他密碼庫資料夾。</string>
+    <string name="copying_your_vault">正在複製您的密碼庫…</string>
+    <string name="the_folder_could_not_be_used_choose_a_different_folder">無法使用此資料夾，請選擇其他資料夾。</string>
+</resources>

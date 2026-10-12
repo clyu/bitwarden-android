@@ -15,6 +15,8 @@ import com.x8bit.bitwarden.data.platform.datasource.network.util.HEADER_VALUE_CL
 import com.x8bit.bitwarden.data.platform.datasource.network.util.HEADER_VALUE_CLIENT_VERSION
 import com.x8bit.bitwarden.data.platform.datasource.network.util.HEADER_VALUE_USER_AGENT
 import com.x8bit.bitwarden.data.platform.manager.CertificateManager
+import com.x8bit.bitwarden.data.platform.manager.localvault.LocalBaseUrlsProvider
+import com.x8bit.bitwarden.data.platform.manager.localvault.LocalVaultStorageManager
 import com.x8bit.bitwarden.data.platform.manager.network.NetworkCookieManager
 import com.x8bit.bitwarden.data.platform.manager.network.NetworkPermissionManager
 import dagger.Module
@@ -67,6 +69,7 @@ object PlatformNetworkModule {
         buildInfoManager: BuildInfoManager,
         networkCookieManager: NetworkCookieManager,
         networkPermissionManager: NetworkPermissionManager,
+        localVaultStorageManager: LocalVaultStorageManager,
         clock: Clock,
     ): BitwardenServiceClientConfig = BitwardenServiceClientConfig(
         clock = clock,
@@ -77,11 +80,12 @@ object PlatformNetworkModule {
             clientVersion = HEADER_VALUE_CLIENT_VERSION,
         ),
         authTokenProvider = authTokenManager,
-        baseUrlsProvider = baseUrlsProvider,
+        baseUrlsProvider = LocalBaseUrlsProvider(delegate = baseUrlsProvider),
         certificateProvider = certificateManager,
         enableHttpBodyLogging = buildInfoManager.isDevBuild,
         cookieProvider = networkCookieManager,
         permissionProvider = networkPermissionManager,
+        localVaultFileSystem = localVaultStorageManager.fileSystem,
     )
 
     @Provides
