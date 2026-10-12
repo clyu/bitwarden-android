@@ -6,6 +6,7 @@ import com.bitwarden.network.interceptor.BaseUrlInterceptors
 import com.bitwarden.network.interceptor.CookieInterceptor
 import com.bitwarden.network.interceptor.HeadersInterceptor
 import com.bitwarden.network.interceptor.PermissionInterceptor
+import com.bitwarden.network.local.LocalServer
 import com.bitwarden.network.model.BitwardenServiceClientConfig
 import com.bitwarden.network.provider.CookieProvider
 import com.bitwarden.network.provider.RefreshTokenProvider
@@ -85,6 +86,9 @@ internal class BitwardenServiceClientImpl(
             logHttpBody = bitwardenServiceClientConfig.enableHttpBodyLogging,
             certificateProvider = bitwardenServiceClientConfig.certificateProvider,
             json = clientJson,
+            localServer = bitwardenServiceClientConfig.localVaultFileSystem?.let {
+                LocalServer(fileSystem = it, clock = bitwardenServiceClientConfig.clock)
+            },
         )
     }
 

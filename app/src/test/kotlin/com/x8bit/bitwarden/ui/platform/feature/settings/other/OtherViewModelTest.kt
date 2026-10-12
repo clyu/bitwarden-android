@@ -1,14 +1,21 @@
 package com.x8bit.bitwarden.ui.platform.feature.settings.other
 
+import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import com.bitwarden.ui.platform.base.BaseViewModelTest
 import com.bitwarden.ui.platform.resource.BitwardenString
 import com.bitwarden.ui.util.asText
+import com.x8bit.bitwarden.data.auth.repository.AuthRepository
+import com.x8bit.bitwarden.data.auth.repository.model.UserState
+import com.x8bit.bitwarden.data.platform.manager.localvault.LocalVaultStorageManager
+import com.x8bit.bitwarden.data.platform.manager.localvault.model.SetVaultFolderResult
 import com.x8bit.bitwarden.data.platform.manager.network.NetworkConnectionManager
 import com.x8bit.bitwarden.data.platform.repository.SettingsRepository
 import com.x8bit.bitwarden.data.platform.repository.model.ClearClipboardFrequency
 import com.x8bit.bitwarden.data.vault.repository.VaultRepository
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -22,6 +29,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.io.IOException
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
@@ -49,6 +57,13 @@ class OtherViewModelTest : BaseViewModelTest() {
     private val vaultRepository = mockk<VaultRepository>()
     private val networkConnectionManager = mockk<NetworkConnectionManager> {
         every { isNetworkConnected } returns true
+    }
+    private val mutableUserStateFlow = MutableStateFlow<UserState?>(null)
+    private val authRepository = mockk<AuthRepository> {
+        every { userStateFlow } returns mutableUserStateFlow
+    }
+    private val localVaultStorageManager = mockk<LocalVaultStorageManager> {
+        every { vaultFolderName } returns null
     }
 
     @BeforeEach
@@ -217,6 +232,82 @@ class OtherViewModelTest : BaseViewModelTest() {
         verify(exactly = 0) { vaultRepository.sync(forced = true) }
     }
 
+    @Test
+    fun `VaultFolderClick should emit NavigateToSelectVaultFolder when no account is logged in`() =
+        runTest {
+            val viewModel = createViewModel()
+            viewModel.eventFlow.test {
+                viewModel.trySendAction(OtherAction.VaultFolderClick)
+                assertEquals(OtherEvent.NavigateToSelectVaultFolder, awaitItem())
+            }
+        }
+
+    @Test
+    fun `VaultFolderClick should show error dialog when an account is logged in`() = runTest {
+        mutableUserStateFlow.value = mockk()
+        val viewModel = createViewModel()
+        viewModel.eventFlow.test {
+            viewModel.trySendAction(OtherAction.VaultFolderClick)
+            expectNoEvents()
+        }
+        assertEquals(
+            DEFAULT_STATE.copy(
+                dialogState = OtherState.DialogState.Error(
+                    title = BitwardenString.vault_folder.asText(),
+                    message = BitwardenString
+                        .log_out_of_all_accounts_before_choosing_a_different_vault_folder
+                        .asText(),
+                ),
+            ),
+            viewModel.stateFlow.value,
+        )
+    }
+
+    @Test
+    fun `VaultFolderSelect should keep the vault in the folder and update the state`() = runTest {
+        val uri = mockk<Uri>()
+        var folderName: String? = null
+        every { localVaultStorageManager.vaultFolderName } answers { folderName }
+        coEvery {
+            localVaultStorageManager.setVaultFolder(uri = uri)
+        } coAnswers {
+            folderName = "primary:Vault"
+            SetVaultFolderResult.Success
+        }
+        val viewModel = createViewModel()
+
+        viewModel.trySendAction(OtherAction.VaultFolderSelect(uri = uri))
+
+        assertEquals(
+            DEFAULT_STATE.copy(vaultFolderName = "primary:Vault"),
+            viewModel.stateFlow.value,
+        )
+        coVerify(exactly = 1) { localVaultStorageManager.setVaultFolder(uri = uri) }
+    }
+
+    @Test
+    fun `VaultFolderSelect should show error dialog when the folder cannot be used`() = runTest {
+        val uri = mockk<Uri>()
+        coEvery {
+            localVaultStorageManager.setVaultFolder(uri = uri)
+        } returns SetVaultFolderResult.Error(error = IOException("Fail"))
+        val viewModel = createViewModel()
+
+        viewModel.trySendAction(OtherAction.VaultFolderSelect(uri = uri))
+
+        assertEquals(
+            DEFAULT_STATE.copy(
+                dialogState = OtherState.DialogState.Error(
+                    title = BitwardenString.an_error_has_occurred.asText(),
+                    message = BitwardenString
+                        .the_folder_could_not_be_used_choose_a_different_folder
+                        .asText(),
+                ),
+            ),
+            viewModel.stateFlow.value,
+        )
+    }
+
     private fun createViewModel(
         state: OtherState? = null,
     ) = OtherViewModel(
@@ -228,6 +319,8 @@ class OtherViewModelTest : BaseViewModelTest() {
             every { toOtherArgs() } returns OtherArgs(isPreAuth = state?.isPreAuth == true)
         },
         networkConnectionManager = networkConnectionManager,
+        authRepo = authRepository,
+        localVaultStorageManager = localVaultStorageManager,
     )
 }
 
@@ -237,5 +330,6 @@ private val DEFAULT_STATE = OtherState(
     allowSyncOnRefresh = false,
     clearClipboardFrequency = ClearClipboardFrequency.NEVER,
     lastSyncTime = "Oct 26, 2023, 12:00\u202FPM",
+    vaultFolderName = null,
     dialogState = null,
 )

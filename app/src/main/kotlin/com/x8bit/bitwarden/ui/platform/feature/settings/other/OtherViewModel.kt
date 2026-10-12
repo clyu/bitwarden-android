@@ -1,5 +1,6 @@
 package com.x8bit.bitwarden.ui.platform.feature.settings.other
 
+import android.net.Uri
 import android.os.Parcelable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
@@ -9,6 +10,9 @@ import com.bitwarden.ui.platform.components.snackbar.model.BitwardenSnackbarData
 import com.bitwarden.ui.platform.resource.BitwardenString
 import com.bitwarden.ui.util.Text
 import com.bitwarden.ui.util.asText
+import com.x8bit.bitwarden.data.auth.repository.AuthRepository
+import com.x8bit.bitwarden.data.platform.manager.localvault.LocalVaultStorageManager
+import com.x8bit.bitwarden.data.platform.manager.localvault.model.SetVaultFolderResult
 import com.x8bit.bitwarden.data.platform.manager.network.NetworkConnectionManager
 import com.x8bit.bitwarden.data.platform.repository.SettingsRepository
 import com.x8bit.bitwarden.data.platform.repository.model.ClearClipboardFrequency
@@ -19,6 +23,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
 import java.time.Clock
 import java.time.Instant
@@ -36,6 +41,8 @@ class OtherViewModel @Inject constructor(
     private val settingsRepo: SettingsRepository,
     private val vaultRepo: VaultRepository,
     private val networkConnectionManager: NetworkConnectionManager,
+    private val authRepo: AuthRepository,
+    private val localVaultStorageManager: LocalVaultStorageManager,
     savedStateHandle: SavedStateHandle,
 ) : BaseViewModel<OtherState, OtherEvent, OtherAction>(
     initialState = savedStateHandle[KEY_STATE]
@@ -52,6 +59,7 @@ class OtherViewModel @Inject constructor(
                     clock = clock,
                 )
                 .orEmpty(),
+            vaultFolderName = localVaultStorageManager.vaultFolderName,
             dialogState = null,
         ),
 ) {
@@ -76,6 +84,8 @@ class OtherViewModel @Inject constructor(
         OtherAction.BackClick -> handleBackClicked()
         is OtherAction.ClearClipboardFrequencyChange -> handleClearClipboardFrequencyChanged(action)
         OtherAction.SyncNowButtonClick -> handleSyncNowButtonClicked()
+        OtherAction.VaultFolderClick -> handleVaultFolderClicked()
+        is OtherAction.VaultFolderSelect -> handleVaultFolderSelected(action)
         is OtherAction.Internal -> handleInternalAction(action)
         OtherAction.DismissDialog -> handleDismissDialog()
     }
@@ -133,10 +143,73 @@ class OtherViewModel @Inject constructor(
         }
     }
 
+    private fun handleVaultFolderClicked() {
+        // An account that is logged in would not be in the folder that is chosen.
+        if (authRepo.userStateFlow.value != null) {
+            mutableStateFlow.update {
+                it.copy(
+                    dialogState = OtherState.DialogState.Error(
+                        title = BitwardenString.vault_folder.asText(),
+                        message = BitwardenString
+                            .log_out_of_all_accounts_before_choosing_a_different_vault_folder
+                            .asText(),
+                    ),
+                )
+            }
+            return
+        }
+        sendEvent(OtherEvent.NavigateToSelectVaultFolder)
+    }
+
+    private fun handleVaultFolderSelected(action: OtherAction.VaultFolderSelect) {
+        mutableStateFlow.update {
+            it.copy(
+                dialogState = OtherState.DialogState.Loading(
+                    BitwardenString.copying_your_vault.asText(),
+                ),
+            )
+        }
+        viewModelScope.launch {
+            val result = localVaultStorageManager.setVaultFolder(uri = action.uri)
+            sendAction(OtherAction.Internal.SetVaultFolderResultReceive(result = result))
+        }
+    }
+
     private fun handleInternalAction(action: OtherAction.Internal) {
         when (action) {
             is OtherAction.Internal.VaultLastSyncReceive -> handleVaultDataReceive(action)
             is OtherAction.Internal.ManualVaultSyncReceive -> handleManualVaultSyncReceive()
+            is OtherAction.Internal.SetVaultFolderResultReceive -> {
+                handleSetVaultFolderResultReceive(action)
+            }
+        }
+    }
+
+    private fun handleSetVaultFolderResultReceive(
+        action: OtherAction.Internal.SetVaultFolderResultReceive,
+    ) {
+        when (action.result) {
+            SetVaultFolderResult.Success -> {
+                mutableStateFlow.update {
+                    it.copy(
+                        vaultFolderName = localVaultStorageManager.vaultFolderName,
+                        dialogState = null,
+                    )
+                }
+            }
+
+            is SetVaultFolderResult.Error -> {
+                mutableStateFlow.update {
+                    it.copy(
+                        dialogState = OtherState.DialogState.Error(
+                            title = BitwardenString.an_error_has_occurred.asText(),
+                            message = BitwardenString
+                                .the_folder_could_not_be_used_choose_a_different_folder
+                                .asText(),
+                        ),
+                    )
+                }
+            }
         }
     }
 
@@ -171,6 +244,7 @@ data class OtherState(
     val allowSyncOnRefresh: Boolean,
     val clearClipboardFrequency: ClearClipboardFrequency,
     val lastSyncTime: String,
+    val vaultFolderName: String?,
     val dialogState: DialogState?,
 ) : Parcelable {
     /**
@@ -204,6 +278,11 @@ sealed class OtherEvent {
      * Navigate back.
      */
     data object NavigateBack : OtherEvent()
+
+    /**
+     * Navigate to the system folder picker to choose the folder that the vault is kept in.
+     */
+    data object NavigateToSelectVaultFolder : OtherEvent()
 
     /**
      * Show a toast with the given message.
@@ -263,6 +342,18 @@ sealed class OtherAction {
     data object SyncNowButtonClick : OtherAction()
 
     /**
+     * Indicates that the user clicked the vault folder row.
+     */
+    data object VaultFolderClick : OtherAction()
+
+    /**
+     * Indicates that the user chose the folder with the given [uri] to keep the vault in.
+     */
+    data class VaultFolderSelect(
+        val uri: Uri,
+    ) : OtherAction()
+
+    /**
      * Indicates that the dialog should be dismissed.
      */
     data object DismissDialog : OtherAction()
@@ -282,5 +373,12 @@ sealed class OtherAction {
          * Indicates a manual vault sync has been received.
          */
         data object ManualVaultSyncReceive : Internal()
+
+        /**
+         * Indicates that the result of choosing the vault folder has been received.
+         */
+        data class SetVaultFolderResultReceive(
+            val result: SetVaultFolderResult,
+        ) : Internal()
     }
 }

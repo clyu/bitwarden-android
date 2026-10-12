@@ -7,6 +7,9 @@ import com.bitwarden.network.interceptor.BaseUrlInterceptors
 import com.bitwarden.network.interceptor.CookieInterceptor
 import com.bitwarden.network.interceptor.HeadersInterceptor
 import com.bitwarden.network.interceptor.PermissionInterceptor
+import com.bitwarden.network.local.LOCAL_VAULT_HOST
+import com.bitwarden.network.local.LocalServer
+import com.bitwarden.network.local.LocalServerInterceptor
 import com.bitwarden.network.ssl.CertificateProvider
 import com.bitwarden.network.ssl.configureSsl
 import com.bitwarden.network.util.HEADER_KEY_AUTHORIZATION
@@ -31,6 +34,7 @@ internal class RetrofitsImpl(
     private val permissionInterceptor: PermissionInterceptor,
     private val certificateProvider: CertificateProvider,
     private val logHttpBody: Boolean = false,
+    private val localServer: LocalServer? = null,
 ) : Retrofits {
     //region Authenticated Retrofits
 
@@ -83,6 +87,7 @@ internal class RetrofitsImpl(
             .client(
                 baseClient
                     .newBuilder()
+                    .addLocalServer(host = LOCAL_VAULT_HOST)
                     .addInterceptor(loggingInterceptor)
                     .addInterceptor(permissionInterceptor)
                     .build(),
@@ -148,6 +153,7 @@ internal class RetrofitsImpl(
             .client(
                 authenticatedOkHttpClient
                     .newBuilder()
+                    .addLocalServer()
                     .addInterceptor(baseUrlInterceptor)
                     .addInterceptor(loggingInterceptor)
                     .addInterceptor(permissionInterceptor)
@@ -163,6 +169,7 @@ internal class RetrofitsImpl(
             .client(
                 baseOkHttpClient
                     .newBuilder()
+                    .addLocalServer()
                     .addInterceptor(baseUrlInterceptor)
                     .addInterceptor(loggingInterceptor)
                     .addInterceptor(permissionInterceptor)
@@ -184,6 +191,18 @@ internal class RetrofitsImpl(
                     .build(),
             )
             .build()
+
+    /**
+     * Has the [localServer] answer the requests of this client, if there is one. It goes before
+     * every interceptor that is about reaching a server over the network, as nothing it answers
+     * goes there. With a [host], only requests for that host are answered and others go out.
+     */
+    private fun OkHttpClient.Builder.addLocalServer(host: String? = null): OkHttpClient.Builder =
+        apply {
+            localServer?.let {
+                addInterceptor(LocalServerInterceptor(localServer = it, host = host))
+            }
+        }
 
     //endregion Helper properties and functions
 }

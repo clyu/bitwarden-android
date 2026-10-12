@@ -12,6 +12,9 @@ on:
       - cxf/**
       - data/**
       - network/**
+      # The local vault, which is a submodule.
+      - local-vault-rs
+      - .gitmodules
       - ui/**
       - gradle/**
       - keystores/**
@@ -35,6 +38,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          submodules: true
 
       - uses: actions/setup-java@v6
         with:
@@ -42,6 +47,20 @@ jobs:
           java-version: 21
 
       - uses: gradle/actions/setup-gradle@v6
+
+      # The local vault is built from the submodule, with the toolchain that it pins, for the ABI
+      # that the APK is built for. The runner has the Android NDK, which cargo-ndk finds by
+      # ANDROID_NDK_HOME.
+      - name: Set up Rust
+        working-directory: local-vault-rs
+        run: |
+          rustup show
+          rustup target add aarch64-linux-android
+          cargo install cargo-ndk --locked
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: local-vault-rs -> ../network/build/local-vault/cargo
 
       # A build can only be installed over one that does not have a higher version code.
       - name: Set the version code
@@ -125,6 +144,51 @@ jobs:
           name: ${{ steps.rename.outputs.apk-name }}-mapping
           path: app/build/outputs/mapping/fdroidRelease/${{ steps.rename.outputs.apk-name }}-mapping.txt
           if-no-files-found: error
+
+  # The tests of what was changed to keep the vault on the device. The build does not wait for
+  # them: they are here to show whether the local vault still does what the app expects of a
+  # server, which is not something that can be seen from a build that succeeds.
+  test:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: read
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      # The unit tests run the local vault on the runner, which is built from the submodule.
+      - name: Set up Rust
+        working-directory: local-vault-rs
+        run: rustup show
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: local-vault-rs -> ../network/build/local-vault/cargo
+
+      - name: Test the local vault
+        run: ./gradlew :network:testDebugUnitTest
+
+      - name: Test the changed parts of the app
+        run: |
+          ./gradlew :app:testStandardDebugUnitTest \
+            --tests "com.x8bit.bitwarden.ui.platform.feature.settings.other.*" \
+            --tests "com.x8bit.bitwarden.data.platform.manager.network.NetworkConnectionManagerTest" \
+            --tests "com.x8bit.bitwarden.data.platform.manager.localvault.*" \
+            --tests "com.x8bit.bitwarden.data.platform.datasource.disk.LocalVaultDiskSourceTest"
 
   # Puts the APK on the Releases page as the "Latest Build" pre-release, so that it can be
   # downloaded without signing in, which workflow artifacts require. An APK signed with the

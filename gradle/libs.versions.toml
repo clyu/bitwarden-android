@@ -43,6 +43,7 @@ googleProtoBufPlugin = "0.10.0"
 googleServices = "4.5.0"
 googleReview = "2.0.2"
 hilt = "2.60.1"
+jna = "5.17.0"
 junit = "6.1.3"
 jvmTarget = "21"
 kotlin = "2.4.20"
@@ -117,6 +118,7 @@ google-play-review = { module = "com.google.android.play:review", version.ref = 
 google-protobuf-javalite = { module = "com.google.protobuf:protobuf-javalite", version.ref = "googleProtoBufJava" }
 # Included so that Renovate tracks updates since protoc is not referenced directly in `dependency {}` blocks.
 google-protobuf-protoc = { module = "com.google.protobuf:protoc", version.ref = "googleProtoBufJava" }
+jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
