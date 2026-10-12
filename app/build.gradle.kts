@@ -82,6 +82,14 @@ configure<ApplicationExtension> {
             name = "SDK_VERSION",
             value = "\"${libs.versions.bitwardenSdk.get()}\"",
         )
+
+        // Packages the native libraries of the given ABIs only, for a smaller APK. The ABIs are
+        // separated by commas, for example: -PabiFilters=arm64-v8a
+        providers.gradleProperty("abiFilters").orNull?.let { abis ->
+            ndk {
+                abiFilters += abis.split(",").map { it.trim() }
+            }
+        }
     }
 
     androidResources {
