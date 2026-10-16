@@ -53,13 +53,47 @@ headers and its body. The local vault works out the rest, as it does for every c
 interceptor only adds the `Content-Type` of the body to the headers, which OkHttp does after the
 interceptors of the app.
 
-`LocalServer` gives the local vault the vault folder and the clock, through UniFFI, and turns a
-folder that cannot be reached into an `IOException`, which the app already handles as a failed
-network call. It handles one request at a time, and streams the content of attachments: it
-leaves the body of a request for an attachment out of what it hands over, writes it to where the
-response says, and opens the file that a download is. A call of the local vault that fails in
-any other way is answered with a 500, as nothing may escape from an interceptor: OkHttp rethrows
-it on a thread of its own, which would take the app down.
+`LocalServer` gives the local vault the vault folder, the clock and the ID of this installation
+of the app, through UniFFI, and turns a folder that cannot be reached into an `IOException`,
+which the app already handles as a failed network call. The local vault fails the same way for
+an account of which files have come to the device, but none with the record of the account or
+none with that of its master password yet, and for an email that no other account has while that
+is so, as answering that the account is not there would log it out, and answering that no account
+has the email would have the app take the master password to be wrong or register the email
+again (`LOCAL_VAULT_FORMAT.md`, "Putting the vault together"). It handles one request at a time,
+and streams the content of attachments: it leaves the body of a request for an attachment out of
+what it hands over, writes it to where the response says, and opens the file that a download is.
+A call of the local vault that fails in any other way is answered with a 500, as nothing may
+escape from an interceptor: OkHttp rethrows it on a thread of its own, which would take the app
+down.
+
+The app shows such a failure as a network error, which does not say which account it is about,
+so the local vault logs the ID of the account as a warning (`Local server cannot use account
+<account id>`), which is the name of its directory in the vault folder. Timber hands it to the
+flight recorder of the app (**Settings › About › Flight recorder**), and to logcat in a build with
+logs. An account whose files will never all come keeps failing so, and with it every login,
+prelogin and registration for an email that no other account has, until its directory is
+deleted by hand: one that a client from before the `vault.json` that says that an account was
+deleted left behind (see "Building"), or one of which the directory of a device was deleted by
+hand. Its files tell such a directory as well: its `vault.json` is missing or says that it has
+version 2, and none of the files in its `devices` has `account` in its `records`, or none has
+`masterPassword` there.
+
+The ID of the installation is `AppIdProvider.uniqueAppId`, the UUID that the app identifies itself
+to a Bitwarden server with. The local vault writes the changes of the app to a directory of the
+vault folder named after it, `<account id>/devices/<that ID>/`, which no other device writes, and
+puts the vault together from the directories of every device, so that a tool that syncs the
+folder never has two versions of a file to choose from. The app makes the ID the first time that
+it needs it, under a lock, so that two threads that ask for it at once do not each make one, and
+keeps it in its own storage, which the backup rules of the app leave out (`backup_rules.xml`,
+`data_extraction_rules.xml`): a phone that is set up from a backup of another one gets an ID of
+its own. Clearing the data of the app, or uninstalling it and installing it
+again, gives it a new ID, and updating it does not. Where the vault is in a folder that the user
+chose, the directory of the one before then stays in it, and must not be deleted by hand, as part
+of the vault may be only in it; the storage of the app, which has the vault otherwise, is emptied
+along with the ID. As nothing writes that directory anymore, it can also keep the user key
+encrypted with the master password of that time for good, so changing the master password is not
+enough if someone else may know the old one (DESIGN.md, "Limits to keep in mind").
 
 ## The vault folder
 
@@ -74,10 +108,15 @@ Until the user chooses a folder, the vault is in the storage of the app
 (`Android/data/<application id>/files/vault/`). Under **Settings › Other › Vault folder** the
 user can choose a folder that is backed up or synced. `LocalVaultStorageManager` then copies the
 accounts that the folder does not have yet, and never overwrites an account that is already
-there, which is what makes it safe to choose a folder that another device has filled. Which
-accounts those are is the rule of the local vault (`accountsMissingIn`), which
-`LocalVaultCopyTest` checks the copy against: the copy does not call the local vault, so that the
-unit tests of the app do not need its library.
+there, which is what makes it safe to choose a folder that another device has filled. Of an
+account that the folder has, it copies what the app wrote that the folder does not have yet: the
+files of the directory of the app in the account, which the folder has otherwise or not at all,
+and the content of attachments that the folder does not have. No other device writes that
+directory, so the files that the app has are the ones that it wrote last, as when the folder was
+filled with a copy of the storage of the app from before its last changes. The files of other
+devices are never copied. What is copied is the rule of the local vault (`accountsMissingIn`,
+`deviceFilesMissingIn`), which `LocalVaultCopyTest` checks the copy against: the copy does not
+call the local vault, so that the unit tests of the app do not need its library.
 
 The folder can only be changed while no account is logged in, as the cached data of a logged-in
 account would belong to a vault that is not in the new folder. The file system that the network
@@ -132,9 +171,10 @@ Everything else is new: the files in the directories of the code map below, the 
 |------|--------|
 | `network/build.gradle.kts` | Builds the local vault from the submodule, adds it to every variant, and depends on JNA. |
 | `gradle/libs.versions.toml` | JNA. |
-| `network/.../BitwardenServiceClientImpl.kt`, `network/.../model/BitwardenServiceClientConfig.kt` | `localVaultFileSystem`: setting it is what turns the local server on. |
+| `network/.../BitwardenServiceClientImpl.kt`, `network/.../model/BitwardenServiceClientConfig.kt` | `localVaultFileSystem`: setting it is what turns the local server on. The local server is given `appIdProvider.uniqueAppId` as the ID of the device. |
 | `network/.../retrofit/RetrofitsImpl.kt` | Installs `LocalServerInterceptor` on each HTTP client. |
 | `app/.../datasource/network/di/PlatformNetworkModule.kt` | Hands the file system and `LocalBaseUrlsProvider` to the network layer. |
+| `app/.../auth/datasource/disk/AuthDiskSourceImpl.kt` | `uniqueAppId` is made under a lock, as it names the directory that the local vault writes the changes of the app to. |
 | `app/.../manager/network/NetworkConnectionManagerImpl.kt` | The network that is always connected. |
 | `app/.../ui/platform/feature/settings/other/` | The setting for the vault folder. |
 | `app/.../ui/auth/feature/landing/LandingScreen.kt`, `.../startregistration/StartRegistrationScreen.kt`, `.../login/LoginScreen.kt`, `.../vaultunlock/VaultUnlockScreen.kt`, and their tests | Logging in on the device: no server is named, and the landing screen and the screen for creating an account have no selector of the environment. |
@@ -183,7 +223,27 @@ NDK and no targets of Android.
 
 To change the local vault, change it in its own repository, where it is tested, and update the
 submodule here to that commit. The browser extension has the same submodule: a change to the
-format of the vault folder has to reach both before either of them writes it.
+format of the vault folder has to reach both before either of them writes it. Version 2, in which
+every device writes a directory of its own, is such a change. The first write of an updated
+client takes a vault of version 1 over, and from then on a client that knows only version 1 does
+not write the account, but does not have it either: its requests for the account are refused as
+unauthorized, which logs the account out; the email of the account is taken to belong to no
+account, so the master key is derived with the default KDF settings and the master password is
+taken to be wrong; and the email can be registered again, after which an updated client can log
+in to the new, empty account (`LOCAL_VAULT_FORMAT.md`, "Accounts with the same email address").
+So the app is released with such a change before the browser extension, or at the same time, and
+not after it: a browser can update the extension before the user has updated the app.
+
+The `vault.json` that says that an account was deleted (`LOCAL_VAULT_FORMAT.md`, "Deleting an
+account") is a change of the same kind, the other way round. A client from before it takes such
+an account for one of a layout that it does not know, which it leaves alone. But it deletes the
+whole directory of an account that it deletes, which can leave behind the file of a device that
+changed the vault while the deletion was on its way to it. An updated client takes that file
+for an account whose other files are still on their way, for good: its requests, and those for
+an email that no other account has, fail until the directory is deleted by hand. If the file that
+is left holds the records of the account and of its master password, as that of the device that
+took the vault of version 1 over does, the account is back instead, without the content of its
+attachments.
 
 ## Code map
 
@@ -191,7 +251,7 @@ format of the vault folder has to reach both before either of them writes it.
 |------|---------|
 | `local-vault-rs/` | The local vault in Rust, a submodule: the route table, the handlers, the vault store, the rules that the app checks itself against, and its tests. |
 | `network/build.gradle.kts` | Builds the local vault and generates its Kotlin. |
-| `network/src/main/kotlin/com/bitwarden/network/local/` | `LocalServer`, which hands requests to the local vault, the interceptor, the file-system interface and its implementation on ordinary files, and the copy of the accounts to another folder. |
+| `network/src/main/kotlin/com/bitwarden/network/local/` | `LocalServer`, which hands requests to the local vault, the interceptor, the file-system interface and its implementation on ordinary files, and the copy of the accounts, and of the files of the app in the accounts that the other folder has, to another folder. |
 | `network/.../retrofit/RetrofitsImpl.kt` | Where the interceptor is installed on each HTTP client. |
 | `app/src/main/kotlin/com/x8bit/bitwarden/data/platform/manager/localvault/` | The vault folder: the manager, the implementation of the file system on a folder the user chose, and the addresses that cannot be reached. |
 | `app/.../datasource/network/di/PlatformNetworkModule.kt` | Where the app hands the file system and the addresses to the network layer. |

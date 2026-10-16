@@ -152,7 +152,11 @@ class AuthDiskSourceImpl(
             ?.toByteArray(Charsets.ISO_8859_1)
 
     override val uniqueAppId: String
-        get() = getString(key = UNIQUE_APP_ID_KEY) ?: generateAndStoreUniqueAppId()
+        get() = getString(key = UNIQUE_APP_ID_KEY) ?: synchronized(this) {
+            // The local vault writes to a directory named after the ID, so two threads that find
+            // no ID at once must not each make one.
+            getString(key = UNIQUE_APP_ID_KEY) ?: generateAndStoreUniqueAppId()
+        }
 
     override var rememberedEmailAddress: String?
         get() = getString(key = REMEMBERED_EMAIL_ADDRESS_KEY)

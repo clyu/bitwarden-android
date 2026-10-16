@@ -48,9 +48,14 @@ class LocalServiceClientTest {
 
     /**
      * Stands in for the parts of the app that register and log in, which are made with a
-     * service that reads the model of the device and so cannot be created in a unit test.
+     * service that reads the model of the device and so cannot be created in a unit test. It
+     * writes as another device, so that what the [client] writes can be told apart.
      */
-    private val server = LocalServer(fileSystem = fileSystem, clock = clock)
+    private val server = LocalServer(
+        fileSystem = fileSystem,
+        clock = clock,
+        deviceId = STAND_IN_DEVICE_ID,
+    )
 
     private var authTokenData: AuthTokenData? = null
 
@@ -61,7 +66,9 @@ class LocalServiceClientTest {
                 clientName = "mockClientName",
                 clientVersion = "mockClientVersion",
             ),
-            appIdProvider = mockk(),
+            appIdProvider = mockk {
+                every { uniqueAppId } returns DEVICE_ID
+            },
             baseUrlsProvider = mockk(),
             authTokenProvider = object : AuthTokenProvider {
                 override fun getAuthTokenDataOrNull(userId: String): AuthTokenData? = authTokenData
@@ -273,6 +280,18 @@ class LocalServiceClientTest {
     }
 
     @Test
+    fun `changes should be written to the directory of the ID of the app`() = runTest {
+        val folder = client
+            .folderService
+            .createFolder(body = FolderJsonRequest(name = "mockFolderName-1"))
+            .getOrThrow()
+
+        val devices = File(root, "${requireNotNull(authTokenData).userId}/devices")
+        assertEquals(setOf(DEVICE_ID, STAND_IN_DEVICE_ID), devices.list().orEmpty().toSet())
+        assertTrue(File(devices, "$DEVICE_ID/vault.json").readText().contains(folder.id))
+    }
+
+    @Test
     fun `attachment content should be downloaded from the local vault`() = runTest {
         val createResponse = client
             .ciphersService
@@ -354,6 +373,8 @@ class LocalServiceClientTest {
 
 private const val EMAIL = "test@example.com"
 private const val PASSWORD_HASH = "mockPasswordHash"
+private const val DEVICE_ID = "11111111-2222-4333-8444-555555555555"
+private const val STAND_IN_DEVICE_ID = "66666666-7777-4888-9999-000000000000"
 
 private val ATTACHMENT_CONTENT = byteArrayOf(1, 2, 3)
 

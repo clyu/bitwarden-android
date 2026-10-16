@@ -87,7 +87,11 @@ internal class BitwardenServiceClientImpl(
             certificateProvider = bitwardenServiceClientConfig.certificateProvider,
             json = clientJson,
             localServer = bitwardenServiceClientConfig.localVaultFileSystem?.let {
-                LocalServer(fileSystem = it, clock = bitwardenServiceClientConfig.clock)
+                LocalServer(
+                    fileSystem = it,
+                    clock = bitwardenServiceClientConfig.clock,
+                    deviceId = bitwardenServiceClientConfig.appIdProvider.uniqueAppId,
+                )
             },
         )
     }

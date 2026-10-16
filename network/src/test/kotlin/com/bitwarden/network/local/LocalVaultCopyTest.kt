@@ -1,6 +1,7 @@
 package com.bitwarden.network.local
 
 import com.bitwarden.localvault.accountsMissingIn
+import com.bitwarden.localvault.deviceFilesMissingIn
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -70,6 +71,74 @@ class LocalVaultCopyTest {
         )
     }
 
+    @Test
+    fun `copyDeviceFilesTo should copy what the device wrote to an account that the target has`() {
+        writeDeviceAccount()
+
+        FileLocalVaultFileSystem(root = root).copyDeviceFilesTo(
+            target = FileLocalVaultFileSystem(root = targetRoot),
+            deviceId = DEVICE_ID,
+        )
+
+        assertEquals("latest", File(targetRoot, "$DEVICE_DIRECTORY/vault.json").readText())
+        assertEquals("older", File(targetRoot, "$DEVICE_DIRECTORY/vault.json.bak").readText())
+        assertArrayEquals(
+            ATTACHMENT_CONTENT,
+            File(targetRoot, "$ACCOUNT_ID/attachments/$CIPHER_ID/$OTHER_ATTACHMENT_ID").readBytes(),
+        )
+        // The file of another device is the one that the target had.
+        assertEquals("newer", File(targetRoot, "$OTHER_DEVICE_DIRECTORY/vault.json").readText())
+        // An account that the target does not have is left to copyMissingAccountsTo.
+        assertEquals(listOf(ACCOUNT_ID), targetRoot.list().orEmpty().toList())
+    }
+
+    @Test
+    fun `missingDeviceFilesIn should find the files that the local vault finds`() {
+        writeDeviceAccount()
+        val source = FileLocalVaultFileSystem(root = root)
+        val target = FileLocalVaultFileSystem(root = targetRoot)
+
+        val missing = source.missingDeviceFilesIn(target = target, deviceId = DEVICE_ID)
+
+        assertEquals(
+            listOf(
+                listOf(ACCOUNT_ID, "attachments", CIPHER_ID, OTHER_ATTACHMENT_ID),
+                listOf(ACCOUNT_ID, "devices", DEVICE_ID, "vault.json"),
+            ),
+            missing,
+        )
+        assertEquals(
+            deviceFilesMissingIn(
+                source = FileSystemCallback(fileSystem = source),
+                target = FileSystemCallback(fileSystem = target),
+                deviceId = DEVICE_ID,
+            ),
+            missing,
+        )
+        // Nothing for an ID that could not be the name of a directory.
+        assertEquals(
+            emptyList<List<String>>(),
+            source.missingDeviceFilesIn(target = target, deviceId = "mock/DeviceId"),
+        )
+    }
+
+    /**
+     * Writes an account that both vault folders have, which the device changed in the source
+     * since the target was filled, and an account that only the source has.
+     */
+    private fun writeDeviceAccount() {
+        listOf(root, targetRoot).forEach {
+            writeFile(root = it, path = "$DEVICE_DIRECTORY/vault.json.bak", content = "older")
+            writeFile(root = it, path = "$ACCOUNT_ID/attachments/$CIPHER_ID/$ATTACHMENT_ID")
+        }
+        writeFile(root = root, path = "$DEVICE_DIRECTORY/vault.json", content = "latest")
+        writeFile(root = targetRoot, path = "$DEVICE_DIRECTORY/vault.json", content = "earlier")
+        writeFile(root = root, path = "$ACCOUNT_ID/attachments/$CIPHER_ID/$OTHER_ATTACHMENT_ID")
+        writeFile(root = root, path = "$OTHER_DEVICE_DIRECTORY/vault.json", content = "other")
+        writeFile(root = targetRoot, path = "$OTHER_DEVICE_DIRECTORY/vault.json", content = "newer")
+        writeFile(root = root, path = "$OTHER_ACCOUNT_ID/devices/$DEVICE_ID/vault.json")
+    }
+
     private fun writeFile(root: File, path: String, content: String? = null) {
         val file = File(root, path)
         file.parentFile?.mkdirs()
@@ -81,5 +150,9 @@ private const val ACCOUNT_ID: String = "mockAccountId-1"
 private const val OTHER_ACCOUNT_ID: String = "mockAccountId-2"
 private const val CIPHER_ID: String = "mockCipherId"
 private const val ATTACHMENT_ID: String = "mockAttachmentId"
+private const val OTHER_ATTACHMENT_ID: String = "mockAttachmentId-2"
+private const val DEVICE_ID: String = "mockDeviceId"
+private const val DEVICE_DIRECTORY: String = "$ACCOUNT_ID/devices/$DEVICE_ID"
+private const val OTHER_DEVICE_DIRECTORY: String = "$ACCOUNT_ID/devices/mockDeviceId-2"
 
 private val ATTACHMENT_CONTENT: ByteArray = byteArrayOf(1, 2, 3)
