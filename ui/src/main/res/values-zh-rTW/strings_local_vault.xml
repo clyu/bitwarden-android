@@ -6,4 +6,8 @@
     <string name="log_out_of_all_accounts_before_choosing_a_different_vault_folder">請先登出所有帳號，再選擇其他密碼庫資料夾。</string>
     <string name="copying_your_vault">正在複製您的密碼庫…</string>
     <string name="the_folder_could_not_be_used_choose_a_different_folder">無法使用此資料夾，請選擇其他資料夾。</string>
+    <string name="logging_in_to_the_vault_on_this_device">正登入到此裝置上的密碼庫。</string>
+    <string name="logging_in_as_x_on_this_device">正在此裝置上以 %1$s 身分登入</string>
+    <string name="logged_in_as_x_on_this_device">已在此裝置上以 %1$s 身分登入。</string>
+    <string name="creating_an_account_in_the_vault_on_this_device">正在此裝置上的密碼庫建立帳號。</string>
 </resources>

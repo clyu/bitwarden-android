@@ -22,7 +22,7 @@ fun BitwardenLogoutConfirmationDialog(
 ) {
     val baseConfirmationMessage = stringResource(id = BitwardenString.logout_confirmation)
     val message = accountSummary
-        ?.let { "$baseConfirmationMessage\n\n${it.email}\n${it.environmentLabel}" }
+        ?.let { "$baseConfirmationMessage\n\n${it.email}" }
         ?: baseConfirmationMessage
     BitwardenTwoButtonDialog(
         title = stringResource(id = BitwardenString.log_out),

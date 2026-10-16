@@ -277,6 +277,16 @@ class LoginScreenTest : BitwardenComposeTest() {
     }
 
     @Test
+    fun `logging in as text should name this device instead of the environment`() {
+        mutableStateFlow.update { it.copy(environmentLabel = "bitwarden.eu") }
+        composeTestRule
+            .onNodeWithText("Logging in as $EMAIL on this device")
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithText("bitwarden.eu", substring = true).assertDoesNotExist()
+    }
+
+    @Test
     fun `master password hint text click should send MasterPasswordHintClick action`() {
         composeTestRule.onNodeWithText("Get master password hint").performClick()
         verify {

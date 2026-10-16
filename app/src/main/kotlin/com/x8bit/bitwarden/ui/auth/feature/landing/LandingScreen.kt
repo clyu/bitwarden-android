@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -34,7 +33,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.bitwarden.data.repository.model.Environment
 import com.bitwarden.ui.platform.base.util.EventsEffect
 import com.bitwarden.ui.platform.base.util.standardHorizontalMargin
 import com.bitwarden.ui.platform.components.account.BitwardenAccountSwitcher
@@ -54,7 +52,6 @@ import com.bitwarden.ui.platform.components.util.rememberVectorPainter
 import com.bitwarden.ui.platform.resource.BitwardenDrawable
 import com.bitwarden.ui.platform.resource.BitwardenString
 import com.bitwarden.ui.platform.theme.BitwardenTheme
-import com.x8bit.bitwarden.ui.platform.components.dropdown.EnvironmentSelector
 
 /**
  * The top level composable for the Landing screen.
@@ -164,9 +161,6 @@ fun LandingScreen(
         LandingScreenContent(
             state = state,
             onEmailInputChange = { viewModel.trySendAction(LandingAction.EmailInputChanged(it)) },
-            onEnvironmentTypeSelect = {
-                viewModel.trySendAction(LandingAction.EnvironmentTypeSelect(it))
-            },
             onRememberMeToggle = { viewModel.trySendAction(LandingAction.RememberMeToggle(it)) },
             onContinueClick = { viewModel.trySendAction(LandingAction.ContinueButtonClick) },
             onCreateAccountClick = { viewModel.trySendAction(LandingAction.CreateAccountClick) },
@@ -180,7 +174,6 @@ fun LandingScreen(
 private fun LandingScreenContent(
     state: LandingState,
     onEmailInputChange: (String) -> Unit,
-    onEnvironmentTypeSelect: (Environment.Type) -> Unit,
     onRememberMeToggle: (Boolean) -> Unit,
     onContinueClick: () -> Unit,
     onCreateAccountClick: () -> Unit,
@@ -230,21 +223,10 @@ private fun LandingScreenContent(
             keyboardType = KeyboardType.Email,
             textFieldTestTag = "EmailAddressEntry",
             cardStyle = CardStyle.Full,
-            supportingContentPadding = PaddingValues(),
-            supportingContent = {
-                EnvironmentSelector(
-                    labelText = stringResource(id = BitwardenString.logging_in_on_with_colon),
-                    dialogTitle = stringResource(id = BitwardenString.logging_in_on),
-                    options = state.environmentTypeOptions,
-                    selectedOption = state.selectedEnvironmentType,
-                    onOptionSelected = onEnvironmentTypeSelect,
-                    isHelpEnabled = false,
-                    onHelpClick = {},
-                    modifier = Modifier
-                        .testTag("RegionSelectorDropdown")
-                        .fillMaxWidth(),
-                )
-            },
+            // The vault is kept on the device, so there is no server to choose.
+            supportingText = stringResource(
+                id = BitwardenString.logging_in_to_the_vault_on_this_device,
+            ),
         )
 
         Spacer(modifier = Modifier.height(height = 8.dp))

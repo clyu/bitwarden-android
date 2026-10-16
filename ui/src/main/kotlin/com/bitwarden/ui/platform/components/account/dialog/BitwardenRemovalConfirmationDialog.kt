@@ -35,6 +35,6 @@ fun BitwardenRemovalConfirmationDialog(
 private fun removalConfirmationMessage(accountSummary: AccountSummary?): String {
     val baseConfirmationMessage = stringResource(id = BitwardenString.remove_account_confirmation)
     return accountSummary
-        ?.let { "$baseConfirmationMessage\n\n${it.email}\n${it.environmentLabel}" }
+        ?.let { "$baseConfirmationMessage\n\n${it.email}" }
         ?: baseConfirmationMessage
 }

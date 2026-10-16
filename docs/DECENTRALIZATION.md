@@ -21,6 +21,7 @@ upstream.
 
 - [How the app hands its requests over](#how-the-app-hands-its-requests-over)
 - [The vault folder](#the-vault-folder)
+- [Logging in on the device](#logging-in-on-the-device)
 - [Making sure nothing reaches a real server](#making-sure-nothing-reaches-a-real-server)
 - [What is changed in upstream files](#what-is-changed-in-upstream-files)
 - [Updating from upstream](#updating-from-upstream)
@@ -83,6 +84,21 @@ account would belong to a vault that is not in the new folder. The file system t
 layer holds is a thin object that looks up the current folder on every call, so the HTTP client
 does not have to be rebuilt when the folder changes.
 
+## Logging in on the device
+
+Where upstream says that the user logs in on a server, or creates an account on one, the app says
+that this happens on this device: under the email address on the landing screen and on the screen
+for creating an account, on the screen of the master password, and on the lock screen. The first
+two have no selector of the environment, as they offered the environment as where to log in or to
+create the account. The account switcher, and the dialogs it opens, name no environment under the
+email address of an account.
+
+The environment is still there, and still decides where the icons of websites come from (see
+below) and which website the links of the app open, but it can no longer be chosen: it stays what
+it was, which is Bitwarden in the United States unless another one was chosen in an earlier
+version of the app. `AccountSummary.environmentLabel` is still filled in, as the landing screen
+tells by it whether an account is already logged in.
+
 ## Making sure nothing reaches a real server
 
 The measures of the local vault apply (see "Making sure nothing reaches a real server" in
@@ -110,7 +126,7 @@ which is the one of Bitwarden by default.
 ## What is changed in upstream files
 
 Everything else is new: the files in the directories of the code map below, the submodule
-`local-vault-rs` with `.gitmodules`, and the strings of the setting.
+`local-vault-rs` with `.gitmodules`, and the strings of the app (`strings_local_vault.xml`).
 
 | File | Change |
 |------|--------|
@@ -121,6 +137,8 @@ Everything else is new: the files in the directories of the code map below, the 
 | `app/.../datasource/network/di/PlatformNetworkModule.kt` | Hands the file system and `LocalBaseUrlsProvider` to the network layer. |
 | `app/.../manager/network/NetworkConnectionManagerImpl.kt` | The network that is always connected. |
 | `app/.../ui/platform/feature/settings/other/` | The setting for the vault folder. |
+| `app/.../ui/auth/feature/landing/LandingScreen.kt`, `.../startregistration/StartRegistrationScreen.kt`, `.../login/LoginScreen.kt`, `.../vaultunlock/VaultUnlockScreen.kt`, and their tests | Logging in on the device: no server is named, and the landing screen and the screen for creating an account have no selector of the environment. |
+| `ui/.../components/account/BitwardenAccountSwitcher.kt`, `.../account/dialog/BitwardenLogoutConfirmationDialog.kt`, `.../account/dialog/BitwardenRemovalConfirmationDialog.kt`, `ui/src/testFixtures/.../BitwardenAccountSwitcherTestHelpers.kt` | The account switcher and its dialogs name no environment. |
 | `.github/workflows/android.yml` | Builds the local vault with the app, and runs the tests of the local vault. |
 
 ## Updating from upstream

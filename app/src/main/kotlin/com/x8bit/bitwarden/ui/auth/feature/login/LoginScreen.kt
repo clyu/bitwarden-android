@@ -276,9 +276,8 @@ private fun LoginScreenContent(
 
         Text(
             text = stringResource(
-                id = BitwardenString.logging_in_as_x_on_y,
+                id = BitwardenString.logging_in_as_x_on_this_device,
                 state.emailAddress,
-                state.environmentLabel,
             ),
             textAlign = TextAlign.Center,
             style = BitwardenTheme.typography.bodySmall,

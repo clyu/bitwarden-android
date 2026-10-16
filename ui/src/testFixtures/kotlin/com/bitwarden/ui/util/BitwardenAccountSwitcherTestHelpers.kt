@@ -31,7 +31,6 @@ fun ComposeContentTestRule.assertSwitcherIsDisplayed(
             hasTextExactly(
                 *listOfNotNull(
                     accountSummary.email,
-                    accountSummary.environmentLabel,
                     "locked".takeUnless { accountSummary.isVaultUnlocked },
                 )
                     .toTypedArray(),
@@ -82,10 +81,6 @@ fun ComposeContentTestRule.assertLockOrLogoutDialogIsDisplayed(
         .onAllNodesWithText(accountSummary.email, substring = true)
         .filterToOne(hasAnyAncestor(isDialog()))
         .assertIsDisplayed()
-    this
-        .onAllNodesWithText(accountSummary.environmentLabel, substring = true)
-        .filterToOne(hasAnyAncestor(isDialog()))
-        .assertIsDisplayed()
 }
 
 /**
@@ -110,10 +105,6 @@ fun ComposeContentTestRule.assertLogoutConfirmationDialogIsDisplayed(
         .onAllNodesWithText(accountSummary.email, substring = true)
         .filterToOne(hasAnyAncestor(isDialog()))
         .assertIsDisplayed()
-    this
-        .onAllNodesWithText(accountSummary.environmentLabel, substring = true)
-        .filterToOne(hasAnyAncestor(isDialog()))
-        .assertIsDisplayed()
 }
 
 /**
@@ -136,10 +127,6 @@ fun ComposeContentTestRule.assertRemovalConfirmationDialogIsDisplayed(
         .assertIsDisplayed()
     this
         .onAllNodesWithText(accountSummary.email, substring = true)
-        .filterToOne(hasAnyAncestor(isDialog()))
-        .assertIsDisplayed()
-    this
-        .onAllNodesWithText(accountSummary.environmentLabel, substring = true)
         .filterToOne(hasAnyAncestor(isDialog()))
         .assertIsDisplayed()
 }

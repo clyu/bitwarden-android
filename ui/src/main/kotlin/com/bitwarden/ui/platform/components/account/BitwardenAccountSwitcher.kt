@@ -339,12 +339,7 @@ private fun AccountSummaryItem(
                 modifier = Modifier.testTag("AccountEmailLabel"),
             )
 
-            Text(
-                text = accountSummary.environmentLabel,
-                style = BitwardenTheme.typography.bodyMedium,
-                color = BitwardenTheme.colorScheme.text.secondary,
-                modifier = Modifier.testTag("AccountEnvironmentLabel"),
-            )
+            // No environment is shown, as every account is kept on the device and not on a server.
 
             accountSummary.supportingTextResOrNull?.let { supportingTextResId ->
                 Text(
@@ -383,7 +378,7 @@ private fun LockOrLogoutDialog(
     onRemoveAccountClick: (AccountSummary) -> Unit,
 ) {
     BitwardenSelectionDialog(
-        title = "${accountSummary.email}\n${accountSummary.environmentLabel}",
+        title = accountSummary.email,
         onDismissRequest = onDismissRequest,
         selectionItems = {
             if (accountSummary.isVaultUnlocked) {

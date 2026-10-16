@@ -3,7 +3,6 @@ package com.x8bit.bitwarden.ui.auth.feature.startregistration
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -61,7 +60,6 @@ import com.x8bit.bitwarden.ui.auth.feature.startregistration.StartRegistrationEv
 import com.x8bit.bitwarden.ui.auth.feature.startregistration.StartRegistrationEvent.NavigateToTerms
 import com.x8bit.bitwarden.ui.auth.feature.startregistration.handlers.StartRegistrationHandler
 import com.x8bit.bitwarden.ui.auth.feature.startregistration.handlers.rememberStartRegistrationHandler
-import com.x8bit.bitwarden.ui.platform.components.dropdown.EnvironmentSelector
 
 /**
  * Top level composable for the start registration screen.
@@ -191,20 +189,10 @@ private fun StartRegistrationContent(
             onValueChange = handler.onEmailInputChange,
             keyboardType = KeyboardType.Email,
             textFieldTestTag = "EmailAddressEntry",
-            supportingContentPadding = PaddingValues(),
-            supportingContent = {
-                EnvironmentSelector(
-                    labelText = stringResource(id = BitwardenString.create_account_on_with_colon),
-                    dialogTitle = stringResource(id = BitwardenString.create_account_on),
-                    options = state.environmentTypeOptions,
-                    selectedOption = state.selectedEnvironmentType,
-                    onOptionSelected = handler.onEnvironmentTypeSelect,
-                    onHelpClick = handler.onServerGeologyHelpClick,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag(tag = "RegionSelectorDropdown"),
-                )
-            },
+            // The vault is kept on the device, so there is no server to choose.
+            supportingText = stringResource(
+                id = BitwardenString.creating_an_account_in_the_vault_on_this_device,
+            ),
             cardStyle = CardStyle.Full,
             modifier = Modifier
                 .fillMaxWidth()
