@@ -71,11 +71,17 @@ internal class LocalResponse(
  *
  * The work is done by the local vault in Rust (the submodule `local-vault-rs`), which the other
  * clients that share a vault folder use as well. This only hands it the requests, the vault
- * folder and the clock, and streams the content of attachments, which does not pass through it.
+ * folder, the clock and the ID of this installation of the app, and streams the content of
+ * attachments, which does not pass through it.
+ *
+ * The local vault writes the changes of the app to a directory of the vault folder named after
+ * [deviceId], which no other device writes, and puts the vault together from the directories of
+ * every device that shares the folder.
  */
 internal class LocalServer(
     private val fileSystem: LocalVaultFileSystem,
     private val clock: Clock,
+    private val deviceId: String,
 ) {
     /**
      * The local vault, which loads its library the first time that it is needed.
@@ -85,6 +91,7 @@ internal class LocalServer(
             fileSystem = FileSystemCallback(fileSystem = fileSystem),
             platform = PlatformCallback(clock = clock),
             client = VaultClientKind.ANDROID,
+            deviceId = deviceId,
         )
     }
 
@@ -100,9 +107,9 @@ internal class LocalServer(
     }
 
     /**
-     * Handles the given [request]. Requests are handled one at a time, as each of them reads and
-     * then replaces the whole vault, and the content of an attachment is stored along with the
-     * request that it is sent with.
+     * Handles the given [request]. Requests are handled one at a time, as each of them reads the
+     * whole vault and then writes what it changed in it, and the content of an attachment is
+     * stored along with the request that it is sent with.
      */
     @Synchronized
     @Throws(IOException::class)

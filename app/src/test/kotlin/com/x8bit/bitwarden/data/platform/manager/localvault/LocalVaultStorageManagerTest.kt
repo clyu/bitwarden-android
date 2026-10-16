@@ -48,6 +48,9 @@ class LocalVaultStorageManagerTest {
     private val localVaultStorageManager: LocalVaultStorageManager = LocalVaultStorageManagerImpl(
         context = context,
         localVaultDiskSource = localVaultDiskSource,
+        appIdProvider = mockk {
+            every { uniqueAppId } returns DEVICE_ID
+        },
         dispatcherManager = FakeDispatcherManager(),
     )
 
@@ -176,6 +179,32 @@ class LocalVaultStorageManagerTest {
     }
 
     @Test
+    fun `setVaultFolder should copy the file of this device to an account that the folder has`() =
+        runTest {
+            val folderOutput = ByteArrayOutputStream()
+            localVaultStorageManager
+                .fileSystem
+                .openOutput(path = DEVICE_FILE_PATH)
+                .use { it.write(VAULT_CONTENT) }
+            every {
+                anyConstructed<SafLocalVaultFileSystem>().exists(path = listOf(ACCOUNT_ID))
+            } returns true
+            // The folder has the account without the file that the app wrote last.
+            every {
+                anyConstructed<SafLocalVaultFileSystem>().openInput(path = DEVICE_FILE_PATH)
+            } returns null
+            every {
+                anyConstructed<SafLocalVaultFileSystem>().openOutput(path = DEVICE_FILE_PATH)
+            } returns folderOutput
+
+            val result = localVaultStorageManager.setVaultFolder(uri = folderUri)
+
+            assertEquals(SetVaultFolderResult.Success, result)
+            assertArrayEquals(VAULT_CONTENT, folderOutput.toByteArray())
+            assertEquals(FOLDER_URI, localVaultDiskSource.vaultFolderUri)
+        }
+
+    @Test
     fun `setVaultFolder should return an error when the folder cannot be written to`() = runTest {
         val error = IOException("mockMessage")
         localVaultStorageManager
@@ -216,6 +245,7 @@ private class FakeLocalVaultDiskSource : LocalVaultDiskSource {
 
 private const val ACCOUNT_ID: String = "mockAccountId-1"
 private const val OTHER_ACCOUNT_ID: String = "mockAccountId-2"
+private const val DEVICE_ID: String = "mockDeviceId"
 private const val VAULT_FILE: String = "vault.json"
 private const val BACKUP_FILE: String = "vault.json.bak"
 private const val FOLDER_URI: String = "content://mockAuthority/tree/mockFolderId"
@@ -224,4 +254,5 @@ private const val FOLDER_PERMISSIONS: Int =
     Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
 
 private val VAULT_PATH: List<String> = listOf(ACCOUNT_ID, VAULT_FILE)
+private val DEVICE_FILE_PATH: List<String> = listOf(ACCOUNT_ID, "devices", DEVICE_ID, VAULT_FILE)
 private val VAULT_CONTENT: ByteArray = byteArrayOf(1, 2, 3)
