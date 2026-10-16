@@ -430,8 +430,8 @@ class VaultUnlockScreenTest : BitwardenComposeTest() {
     @Test
     fun `email state change should update logged in as text`() {
         val newEmail = "david@bitwarden.com"
-        val textBeforeUpdate = "Logged in as ${DEFAULT_STATE.email} on $DEFAULT_ENVIRONMENT_URL."
-        val textAfterUpdate = "Logged in as $newEmail on $DEFAULT_ENVIRONMENT_URL."
+        val textBeforeUpdate = "Logged in as ${DEFAULT_STATE.email} on this device."
+        val textAfterUpdate = "Logged in as $newEmail on this device."
         composeTestRule.onNodeWithText(textBeforeUpdate).assertExists()
         composeTestRule.onNodeWithText(textAfterUpdate).assertDoesNotExist()
         mutableStateFlow.update { it.copy(email = newEmail) }
@@ -440,15 +440,16 @@ class VaultUnlockScreenTest : BitwardenComposeTest() {
     }
 
     @Test
-    fun `environment url state change should update logged in as text`() {
+    fun `environment url should not be shown in logged in as text`() {
         val newEnvironmentUrl = "eu.bitwarden.com"
-        val textBeforeUpdate = "Logged in as ${DEFAULT_STATE.email} on $DEFAULT_ENVIRONMENT_URL."
-        val textAfterUpdate = "Logged in as ${DEFAULT_STATE.email} on $newEnvironmentUrl."
-        composeTestRule.onNodeWithText(textBeforeUpdate).assertExists()
-        composeTestRule.onNodeWithText(textAfterUpdate).assertDoesNotExist()
+        val text = "Logged in as ${DEFAULT_STATE.email} on this device."
+        composeTestRule.onNodeWithText(text).assertExists()
+        composeTestRule
+            .onNodeWithText(DEFAULT_ENVIRONMENT_URL, substring = true)
+            .assertDoesNotExist()
         mutableStateFlow.update { it.copy(environmentUrl = newEnvironmentUrl) }
-        composeTestRule.onNodeWithText(textBeforeUpdate).assertDoesNotExist()
-        composeTestRule.onNodeWithText(textAfterUpdate).assertExists()
+        composeTestRule.onNodeWithText(text).assertExists()
+        composeTestRule.onNodeWithText(newEnvironmentUrl, substring = true).assertDoesNotExist()
     }
 
     @Test

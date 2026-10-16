@@ -12,6 +12,7 @@ import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -370,28 +371,12 @@ class LandingScreenTest : BitwardenComposeTest() {
     }
 
     @Test
-    fun `selecting environment should send EnvironmentOptionSelect action`() {
-        val selectedEnvironment = Environment.Prod.Eu
-
-        // Clicking to open dialog
+    fun `local vault text should be shown instead of the environment selector`() {
         composeTestRule
-            .onNodeWithText(Environment.Prod.Us.label)
-            .performClick()
-
-        // Clicking item on dialog
-        composeTestRule
-            .onNodeWithText(selectedEnvironment.label)
-            .assert(hasAnyAncestor(isDialog()))
-            .performClick()
-
-        verify {
-            viewModel.trySendAction(LandingAction.EnvironmentTypeSelect(selectedEnvironment.type))
-        }
-
-        // Make sure dialog is hidden:
-        composeTestRule
-            .onNode(isDialog())
-            .assertDoesNotExist()
+            .onNodeWithText(text = "Logging in to the vault on this device.")
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithTag(testTag = "RegionSelectorDropdown").assertDoesNotExist()
     }
 
     @Test

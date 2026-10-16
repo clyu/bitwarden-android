@@ -1,12 +1,12 @@
 package com.x8bit.bitwarden.ui.auth.feature.startregistration
 
-import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.filterToOne
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -183,16 +183,6 @@ class StartRegistrationScreenTest : BitwardenComposeTest() {
     }
 
     @Test
-    fun `clicking the server tool tip should send ServerGeologyHelpClickAction`() {
-        composeTestRule
-            .onNodeWithContentDescription("Help with server geolocations, External link")
-            .performScrollTo()
-            .performClick()
-
-        verify { viewModel.trySendAction(StartRegistrationAction.ServerGeologyHelpClick) }
-    }
-
-    @Test
     fun `when NavigateToServerSelectionInfo is observed event should invoke intent manager`() {
         mutableEventFlow.tryEmit(StartRegistrationEvent.NavigateToServerSelectionInfo)
 
@@ -204,31 +194,12 @@ class StartRegistrationScreenTest : BitwardenComposeTest() {
     }
 
     @Test
-    fun `when environment selected in dialog should send EnvironmentTypeSelect action`() {
-        val selectedEnvironment = Environment.Prod.Eu
-
-        // Clicking to open dialog
+    fun `local vault text should be shown instead of the environment selector`() {
         composeTestRule
-            .onNodeWithText(Environment.Prod.Us.label)
+            .onNodeWithText(text = "Creating an account in the vault on this device.")
             .performScrollTo()
-            .performClick()
-
-        // Clicking item on dialog
-        composeTestRule
-            .onNodeWithText(selectedEnvironment.label)
-            .assert(hasAnyAncestor(isDialog()))
-            .performClick()
-
-        verify {
-            viewModel.trySendAction(
-                StartRegistrationAction.EnvironmentTypeSelect(selectedEnvironment.type),
-            )
-        }
-
-        // Make sure dialog is hidden:
-        composeTestRule
-            .onNode(isDialog())
-            .assertDoesNotExist()
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithTag(testTag = "RegionSelectorDropdown").assertDoesNotExist()
     }
 
     @Test

@@ -6,4 +6,8 @@
     <string name="log_out_of_all_accounts_before_choosing_a_different_vault_folder">Log out of all accounts before choosing a different vault folder.</string>
     <string name="copying_your_vault">Copying your vault…</string>
     <string name="the_folder_could_not_be_used_choose_a_different_folder">The folder could not be used. Choose a different folder.</string>
+    <string name="logging_in_to_the_vault_on_this_device">Logging in to the vault on this device.</string>
+    <string name="logging_in_as_x_on_this_device">Logging in as %1$s on this device</string>
+    <string name="logged_in_as_x_on_this_device">Logged in as %1$s on this device.</string>
+    <string name="creating_an_account_in_the_vault_on_this_device">Creating an account in the vault on this device.</string>
 </resources>
