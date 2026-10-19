@@ -165,6 +165,7 @@ class AccountSecurityViewModel @Inject constructor(
         AccountSecurityAction.DismissDialog -> handleDismissDialog()
         AccountSecurityAction.EnableBiometricsClick -> handleEnableBiometricsClick()
         AccountSecurityAction.FingerPrintLearnMoreClick -> handleFingerPrintLearnMoreClick()
+        AccountSecurityAction.KdfSettingsClick -> handleKdfSettingsClick()
         AccountSecurityAction.LockNowClick -> handleLockNowClick()
         AccountSecurityAction.LogoutClick -> handleLogoutClick()
         AccountSecurityAction.ManageDevicesClick -> handleManageDevicesClick()
@@ -363,6 +364,10 @@ class AccountSecurityViewModel @Inject constructor(
 
     private fun handleManageDevicesClick() {
         sendEvent(AccountSecurityEvent.NavigateToManageDevices)
+    }
+
+    private fun handleKdfSettingsClick() {
+        sendEvent(AccountSecurityEvent.NavigateToKdfSettings)
     }
 
     private fun handleInternalAction(action: AccountSecurityAction.Internal) {
@@ -720,6 +725,11 @@ sealed class AccountSecurityEvent {
      * Navigate to the Manage Devices screen.
      */
     data object NavigateToManageDevices : AccountSecurityEvent()
+
+    /**
+     * Navigate to the encryption key settings screen.
+     */
+    data object NavigateToKdfSettings : AccountSecurityEvent()
 }
 
 /**
@@ -773,6 +783,11 @@ sealed class AccountSecurityAction {
      * User clicked fingerprint phrase.
      */
     data object FingerPrintLearnMoreClick : AccountSecurityAction()
+
+    /**
+     * User clicked encryption key settings.
+     */
+    data object KdfSettingsClick : AccountSecurityAction()
 
     /**
      * User clicked lock now.

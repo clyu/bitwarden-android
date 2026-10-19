@@ -10,4 +10,18 @@
     <string name="logging_in_as_x_on_this_device">Logging in as %1$s on this device</string>
     <string name="logged_in_as_x_on_this_device">Logged in as %1$s on this device.</string>
     <string name="creating_an_account_in_the_vault_on_this_device">Creating an account in the vault on this device.</string>
+    <string name="encryption_key_settings">Encryption key settings</string>
+    <string name="choose_how_the_key_that_unlocks_your_vault_is_derived_desc_long">Choose how the key that unlocks your vault is derived from your master password. All options are secure, but stronger ones protect better against guessing the master password, especially from a copy of the vault folder. The default settings suit most users.</string>
+    <string name="kdf_iterations">KDF iterations</string>
+    <string name="kdf_memory_mb">KDF memory (MB)</string>
+    <string name="kdf_parallelism">KDF parallelism</string>
+    <string name="we_recommend_x_or_more">We recommend %1$,d or more.</string>
+    <string name="values_above_the_default_improve_security_desc_long">Values above the default improve security, but your vault takes longer to unlock, on this device and on the other devices that share the vault folder. Increase them in small steps, and try each change on all of your devices.</string>
+    <string name="no_device_is_logged_out_desc_long">No device is logged out. The other devices that share the vault folder use the new settings after their next sync.</string>
+    <string name="update_encryption_settings">Update encryption settings</string>
+    <string name="update_settings">Update settings</string>
+    <string name="kdf_iterations_must_be_between_x_and_y">KDF iterations must be between %1$,d and %2$,d.</string>
+    <string name="kdf_memory_must_be_between_x_and_y_mb">KDF memory must be between %1$,d and %2$,d MB.</string>
+    <string name="kdf_parallelism_must_be_between_x_and_y">KDF parallelism must be between %1$,d and %2$,d.</string>
+    <string name="your_encryption_key_settings_were_changed_on_another_device_try_again">Your encryption key settings were changed on another device. Try again.</string>
 </resources>

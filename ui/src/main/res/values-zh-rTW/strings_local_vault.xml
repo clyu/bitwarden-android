@@ -10,4 +10,18 @@
     <string name="logging_in_as_x_on_this_device">正在此裝置上以 %1$s 身分登入</string>
     <string name="logged_in_as_x_on_this_device">已在此裝置上以 %1$s 身分登入。</string>
     <string name="creating_an_account_in_the_vault_on_this_device">正在此裝置上的密碼庫建立帳號。</string>
+    <string name="encryption_key_settings">加密金鑰設定</string>
+    <string name="choose_how_the_key_that_unlocks_your_vault_is_derived_desc_long">選擇如何從您的主密碼衍生出解鎖密碼庫的金鑰。所有選項都很安全，但較強的設定更能防止主密碼被猜出，尤其是從密碼庫資料夾的副本猜測時。預設設定適合大多數使用者。</string>
+    <string name="kdf_iterations">KDF 疊代</string>
+    <string name="kdf_memory_mb">KDF 記憶體 (MB)</string>
+    <string name="kdf_parallelism">KDF 平行數量</string>
+    <string name="we_recommend_x_or_more">我們建議使用 %1$,d 或以上。</string>
+    <string name="values_above_the_default_improve_security_desc_long">高於預設值的設定可提升安全性，但密碼庫的解鎖時間會變長，在此裝置及共用密碼庫資料夾的其他裝置上皆然。請小幅度逐步調高，並在您所有的裝置上試用每一次變更。</string>
+    <string name="no_device_is_logged_out_desc_long">不會登出任何裝置。共用密碼庫資料夾的其他裝置會在下次同步後使用新的設定。</string>
+    <string name="update_encryption_settings">更新加密設定</string>
+    <string name="update_settings">更新設定</string>
+    <string name="kdf_iterations_must_be_between_x_and_y">KDF 疊代必須介於 %1$,d 到 %2$,d 之間。</string>
+    <string name="kdf_memory_must_be_between_x_and_y_mb">KDF 記憶體必須介於 %1$,d 到 %2$,d MB 之間。</string>
+    <string name="kdf_parallelism_must_be_between_x_and_y">KDF 平行數量必須介於 %1$,d 到 %2$,d 之間。</string>
+    <string name="your_encryption_key_settings_were_changed_on_another_device_try_again">您的加密金鑰設定已在其他裝置上變更，請再試一次。</string>
 </resources>

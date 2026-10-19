@@ -187,6 +187,10 @@ jobs:
           ./gradlew :app:testStandardDebugUnitTest \
             --tests "com.x8bit.bitwarden.ui.platform.feature.settings.other.*" \
             --tests "com.x8bit.bitwarden.ui.platform.feature.settings.accountsecurity.pendingrequests.*" \
+            --tests "com.x8bit.bitwarden.ui.platform.feature.settings.accountsecurity.AccountSecurity*" \
+            --tests "com.x8bit.bitwarden.ui.platform.feature.settings.accountsecurity.kdfsettings.*" \
+            --tests "com.x8bit.bitwarden.data.auth.manager.KdfSettingsManagerTest" \
+            --tests "com.x8bit.bitwarden.data.auth.repository.AuthRepositoryTest.validatePassword*" \
             --tests "com.x8bit.bitwarden.data.platform.manager.network.NetworkConnectionManagerTest" \
             --tests "com.x8bit.bitwarden.data.platform.manager.localvault.*" \
             --tests "com.x8bit.bitwarden.data.platform.datasource.disk.LocalVaultDiskSourceTest"

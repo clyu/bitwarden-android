@@ -1392,6 +1392,11 @@ internal class AuthRepositoryImpl(
                         onSuccess = { ValidatePasswordResult.Success(isValid = it) },
                         onFailure = { ValidatePasswordResult.Error(error = it) },
                     )
+                    // The hash is that of the KDF settings it was made with, and no longer
+                    // matches once the vault is unlocked with others, which a sync or the
+                    // encryption key settings may have set. The master password is then checked
+                    // against the user key, which stores the hash of the new settings.
+                    .takeUnless { it == ValidatePasswordResult.Success(isValid = false) }
             }
             ?: run {
                 val encryptedKey = profile

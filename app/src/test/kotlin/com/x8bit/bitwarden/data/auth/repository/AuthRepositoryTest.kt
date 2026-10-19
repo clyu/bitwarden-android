@@ -6801,6 +6801,73 @@ class AuthRepositoryTest {
             )
         }
 
+    @Suppress("MaxLineLength")
+    @Test
+    fun `validatePassword with a stored password hash of other KDF settings and a stored masterKeyWrappedUserKey with sdk success returns ValidatePasswordResult Success valid`() =
+        runTest {
+            val userId = USER_ID_1
+            val password = "password"
+            val passwordHash = "passwordHash"
+            val newPasswordHash = "newPasswordHash"
+            fakeAuthDiskSource.userState = SINGLE_USER_STATE_1
+            fakeAuthDiskSource.storeMasterPasswordHash(userId = userId, passwordHash = passwordHash)
+            coEvery {
+                vaultSdkSource.validatePassword(
+                    userId = userId,
+                    password = password,
+                    passwordHash = passwordHash,
+                )
+            } returns false.asSuccess()
+            coEvery {
+                vaultSdkSource.validatePasswordUserKey(
+                    userId = userId,
+                    password = password,
+                    encryptedUserKey = ENCRYPTED_USER_KEY,
+                )
+            } returns newPasswordHash.asSuccess()
+
+            val result = repository.validatePassword(password = password)
+
+            assertEquals(ValidatePasswordResult.Success(isValid = true), result)
+            fakeAuthDiskSource.assertMasterPasswordHash(
+                userId = userId,
+                passwordHash = newPasswordHash,
+            )
+        }
+
+    @Suppress("MaxLineLength")
+    @Test
+    fun `validatePassword with a stored password hash that does not match and a stored masterKeyWrappedUserKey with sdk failure returns ValidatePasswordResult Success invalid`() =
+        runTest {
+            val userId = USER_ID_1
+            val password = "password"
+            val passwordHash = "passwordHash"
+            fakeAuthDiskSource.userState = SINGLE_USER_STATE_1
+            fakeAuthDiskSource.storeMasterPasswordHash(userId = userId, passwordHash = passwordHash)
+            coEvery {
+                vaultSdkSource.validatePassword(
+                    userId = userId,
+                    password = password,
+                    passwordHash = passwordHash,
+                )
+            } returns false.asSuccess()
+            coEvery {
+                vaultSdkSource.validatePasswordUserKey(
+                    userId = userId,
+                    password = password,
+                    encryptedUserKey = ENCRYPTED_USER_KEY,
+                )
+            } returns Throwable("Fail").asFailure()
+
+            val result = repository.validatePassword(password = password)
+
+            assertEquals(ValidatePasswordResult.Success(isValid = false), result)
+            fakeAuthDiskSource.assertMasterPasswordHash(
+                userId = userId,
+                passwordHash = passwordHash,
+            )
+        }
+
     @Test
     fun `validatePin returns ValidatePinResult Error when no active account found`() = runTest {
         val pin = "PIN"
