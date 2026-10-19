@@ -54,6 +54,7 @@ class AccountSecurityScreenTest : BitwardenComposeTest() {
     private var onNavigateToPendingRequestsCalled = false
     private var onNavigateToUnlockSetupScreenCalled = false
     private var onNavigateToManageDevicesCalled = false
+    private var onNavigateToKdfSettingsCalled = false
 
     private val intentManager = mockk<IntentManager> {
         every { launchUri(any()) } just runs
@@ -95,6 +96,7 @@ class AccountSecurityScreenTest : BitwardenComposeTest() {
                 onNavigateToPendingRequests = { onNavigateToPendingRequestsCalled = true },
                 onNavigateToSetupUnlockScreen = { onNavigateToUnlockSetupScreenCalled = true },
                 onNavigateToManageDevices = { onNavigateToManageDevicesCalled = true },
+                onNavigateToKdfSettings = { onNavigateToKdfSettingsCalled = true },
                 viewModel = viewModel,
             )
         }
@@ -1793,6 +1795,31 @@ class AccountSecurityScreenTest : BitwardenComposeTest() {
             .performScrollTo()
             .performClick()
         verify { viewModel.trySendAction(AccountSecurityAction.ManageDevicesClick) }
+    }
+
+    @Test
+    fun `on NavigateToKdfSettings event should call onNavigateToKdfSettings`() {
+        mutableEventFlow.tryEmit(AccountSecurityEvent.NavigateToKdfSettings)
+        assertTrue(onNavigateToKdfSettingsCalled)
+    }
+
+    @Test
+    fun `on encryption key settings click should send KdfSettingsClick action`() {
+        composeTestRule
+            .onNodeWithText("Encryption key settings")
+            .performScrollTo()
+            .performClick()
+        verify { viewModel.trySendAction(AccountSecurityAction.KdfSettingsClick) }
+    }
+
+    @Test
+    fun `encryption key settings row should be displayed according to state`() {
+        val rowText = "Encryption key settings"
+        composeTestRule.onNodeWithText(rowText).performScrollTo().assertIsDisplayed()
+
+        mutableStateFlow.update { it.copy(isUnlockWithPasswordEnabled = false) }
+
+        composeTestRule.onNodeWithText(rowText).assertDoesNotExist()
     }
 }
 

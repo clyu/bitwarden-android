@@ -12,10 +12,15 @@ import com.bitwarden.network.model.CreateCipherResponseJson
 import com.bitwarden.network.model.FolderJsonRequest
 import com.bitwarden.network.model.GetCipherResponse
 import com.bitwarden.network.model.GetTokenResponseJson
+import com.bitwarden.network.model.KdfJson
+import com.bitwarden.network.model.KdfTypeJson
+import com.bitwarden.network.model.MasterPasswordAuthenticationDataJson
+import com.bitwarden.network.model.MasterPasswordUnlockDataJson
 import com.bitwarden.network.model.PasswordHintResponseJson
 import com.bitwarden.network.model.SyncResponseJson
 import com.bitwarden.network.model.UpdateCipherResponseJson
 import com.bitwarden.network.model.UpdateFolderResponseJson
+import com.bitwarden.network.model.UpdateKdfJsonRequest
 import com.bitwarden.network.model.createMockAttachmentJsonRequest
 import com.bitwarden.network.model.createMockCipherJsonRequest
 import com.bitwarden.network.util.parseJwtTokenDataOrNull
@@ -98,26 +103,7 @@ class LocalServiceClientTest {
                 readBody = { REGISTER_JSON.toByteArray() },
             ),
         )
-        val form = mapOf(
-            "grant_type" to "password",
-            "username" to EMAIL,
-            "password" to PASSWORD_HASH,
-        )
-        val tokenResponse = server.handle(
-            request = LocalRequest(
-                method = "POST",
-                url = "https://$LOCAL_VAULT_HOST/identity/connect/token",
-                headers = mapOf("Content-Type" to "application/x-www-form-urlencoded"),
-                readBody = {
-                    form
-                        .entries
-                        .joinToString(separator = "&") { (name, value) ->
-                            "$name=${URLEncoder.encode(value, Charsets.UTF_8)}"
-                        }
-                        .toByteArray()
-                },
-            ),
-        )
+        val tokenResponse = logIn(passwordHash = PASSWORD_HASH)
         val accessToken = json
             .decodeFromString<GetTokenResponseJson.Success>(requireNotNull(tokenResponse.body))
             .accessToken
@@ -353,6 +339,68 @@ class LocalServiceClientTest {
         )
     }
 
+    @Test
+    fun `KDF settings should be changed in the local vault without logging the account out`() =
+        runTest {
+            val securityStamp = client.syncService.sync().getOrThrow().profile.securityStamp
+
+            client.accountsService.updateKdf(body = UPDATE_KDF_REQUEST).getOrThrow()
+
+            val syncResponse = client.syncService.sync().getOrThrow()
+            assertEquals(securityStamp, syncResponse.profile.securityStamp)
+            assertEquals(NEW_USER_KEY, syncResponse.profile.key)
+            assertEquals(
+                MasterPasswordUnlockDataJson(
+                    salt = EMAIL,
+                    kdf = ARGON2_KDF,
+                    masterKeyWrappedUserKey = NEW_USER_KEY,
+                ),
+                syncResponse.userDecryption?.masterPasswordUnlock,
+            )
+            // The master password is known by the hash that the new settings derive.
+            assertEquals(400, logIn(passwordHash = PASSWORD_HASH).code)
+            assertEquals(200, logIn(passwordHash = NEW_PASSWORD_HASH).code)
+        }
+
+    @Test
+    fun `KDF settings should not be changed with the hash of another master password`() =
+        runTest {
+            val result = client.accountsService.updateKdf(
+                body = UPDATE_KDF_REQUEST.copy(masterPasswordHash = "mockOtherPasswordHash"),
+            )
+
+            assertTrue(requireNotNull(result.exceptionOrNull()).isBadRequest())
+            assertEquals(200, logIn(passwordHash = PASSWORD_HASH).code)
+            assertEquals(400, logIn(passwordHash = NEW_PASSWORD_HASH).code)
+        }
+
+    /**
+     * Logs in to the account with the [passwordHash] that the app derives from the master
+     * password, as the app does when the user logs in.
+     */
+    private fun logIn(passwordHash: String): LocalResponse {
+        val form = mapOf(
+            "grant_type" to "password",
+            "username" to EMAIL,
+            "password" to passwordHash,
+        )
+        return server.handle(
+            request = LocalRequest(
+                method = "POST",
+                url = "https://$LOCAL_VAULT_HOST/identity/connect/token",
+                headers = mapOf("Content-Type" to "application/x-www-form-urlencoded"),
+                readBody = {
+                    form
+                        .entries
+                        .joinToString(separator = "&") { (name, value) ->
+                            "$name=${URLEncoder.encode(value, Charsets.UTF_8)}"
+                        }
+                        .toByteArray()
+                },
+            ),
+        )
+    }
+
     /**
      * A request for an item the way the app sends it for an item of the user: without an
      * organization, and encrypted for the account that is logged in.
@@ -373,10 +421,39 @@ class LocalServiceClientTest {
 
 private const val EMAIL = "test@example.com"
 private const val PASSWORD_HASH = "mockPasswordHash"
+private const val NEW_PASSWORD_HASH = "mockNewPasswordHash"
+private const val NEW_USER_KEY = "mockNewUserKey"
 private const val DEVICE_ID = "11111111-2222-4333-8444-555555555555"
 private const val STAND_IN_DEVICE_ID = "66666666-7777-4888-9999-000000000000"
 
 private val ATTACHMENT_CONTENT = byteArrayOf(1, 2, 3)
+
+private val ARGON2_KDF = KdfJson(
+    kdfType = KdfTypeJson.ARGON2_ID,
+    iterations = 3,
+    memory = 64,
+    parallelism = 4,
+)
+
+/**
+ * The request that the app changes the KDF settings with, from the PBKDF2-SHA256 of the account
+ * to Argon2id.
+ */
+private val UPDATE_KDF_REQUEST = UpdateKdfJsonRequest(
+    authenticationData = MasterPasswordAuthenticationDataJson(
+        kdf = ARGON2_KDF,
+        masterPasswordAuthenticationHash = NEW_PASSWORD_HASH,
+        salt = EMAIL,
+    ),
+    key = NEW_USER_KEY,
+    masterPasswordHash = PASSWORD_HASH,
+    newMasterPasswordHash = NEW_PASSWORD_HASH,
+    unlockData = MasterPasswordUnlockDataJson(
+        salt = EMAIL,
+        kdf = ARGON2_KDF,
+        masterKeyWrappedUserKey = NEW_USER_KEY,
+    ),
+)
 
 private const val REGISTER_JSON = """
 {

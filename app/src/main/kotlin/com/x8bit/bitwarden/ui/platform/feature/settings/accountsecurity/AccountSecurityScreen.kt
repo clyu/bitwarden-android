@@ -87,6 +87,7 @@ fun AccountSecurityScreen(
     onNavigateToPendingRequests: () -> Unit,
     onNavigateToSetupUnlockScreen: () -> Unit,
     onNavigateToManageDevices: () -> Unit,
+    onNavigateToKdfSettings: () -> Unit,
     viewModel: AccountSecurityViewModel = hiltViewModel(),
     biometricsManager: BiometricsManager = LocalBiometricsManager.current,
     intentManager: IntentManager = LocalIntentManager.current,
@@ -121,6 +122,8 @@ fun AccountSecurityScreen(
             }
 
             is AccountSecurityEvent.NavigateToManageDevices -> onNavigateToManageDevices()
+
+            AccountSecurityEvent.NavigateToKdfSettings -> onNavigateToKdfSettings()
 
             is AccountSecurityEvent.ShowBiometricsPrompt -> {
                 showBiometricsPrompt = true
@@ -398,6 +401,17 @@ fun AccountSecurityScreen(
                     ),
                     cardStyle = CardStyle.Middle(),
                     modifier = Modifier
+                        .standardHorizontalMargin()
+                        .fillMaxWidth(),
+                )
+                // The encryption key settings of this fork, which upstream has only in the web
+                // vault.
+                BitwardenTextRow(
+                    text = stringResource(id = BitwardenString.encryption_key_settings),
+                    onClick = { viewModel.trySendAction(AccountSecurityAction.KdfSettingsClick) },
+                    cardStyle = CardStyle.Middle(),
+                    modifier = Modifier
+                        .testTag("EncryptionKeySettingsLabel")
                         .standardHorizontalMargin()
                         .fillMaxWidth(),
                 )

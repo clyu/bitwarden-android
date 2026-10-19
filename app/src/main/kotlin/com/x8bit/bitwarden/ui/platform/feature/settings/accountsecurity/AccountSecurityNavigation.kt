@@ -21,6 +21,7 @@ fun NavGraphBuilder.accountSecurityDestination(
     onNavigateToPendingRequests: () -> Unit,
     onNavigateToSetupUnlockScreen: () -> Unit,
     onNavigateToManageDevices: () -> Unit,
+    onNavigateToKdfSettings: () -> Unit,
 ) {
     composableWithPushTransitions<AccountSecurityRoute> {
         AccountSecurityScreen(
@@ -29,6 +30,7 @@ fun NavGraphBuilder.accountSecurityDestination(
             onNavigateToPendingRequests = onNavigateToPendingRequests,
             onNavigateToSetupUnlockScreen = onNavigateToSetupUnlockScreen,
             onNavigateToManageDevices = onNavigateToManageDevices,
+            onNavigateToKdfSettings = onNavigateToKdfSettings,
         )
     }
 }

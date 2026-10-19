@@ -18,6 +18,8 @@ import com.bitwarden.ui.platform.util.ParcelableRouteSerializer
 import com.x8bit.bitwarden.ui.platform.feature.settings.about.aboutDestination
 import com.x8bit.bitwarden.ui.platform.feature.settings.about.navigateToAbout
 import com.x8bit.bitwarden.ui.platform.feature.settings.accountsecurity.accountSecurityDestination
+import com.x8bit.bitwarden.ui.platform.feature.settings.accountsecurity.kdfsettings.kdfSettingsDestination
+import com.x8bit.bitwarden.ui.platform.feature.settings.accountsecurity.kdfsettings.navigateToKdfSettings
 import com.x8bit.bitwarden.ui.platform.feature.settings.accountsecurity.navigateToAccountSecurity
 import com.x8bit.bitwarden.ui.platform.feature.settings.appearance.appearanceDestination
 import com.x8bit.bitwarden.ui.platform.feature.settings.appearance.navigateToAppearance
@@ -155,7 +157,10 @@ fun NavGraphBuilder.settingsGraph(
             onNavigateToPendingRequests = onNavigateToPendingRequests,
             onNavigateToSetupUnlockScreen = onNavigateToSetupUnlockScreen,
             onNavigateToManageDevices = onNavigateToManageDevices,
+            onNavigateToKdfSettings = { navController.navigateToKdfSettings() },
         )
+        // The encryption key settings of this fork, which upstream has only in the web vault.
+        kdfSettingsDestination(onNavigateBack = { navController.popBackStack() })
         appearanceDestination(
             isPreAuth = false,
             onNavigateBack = { navController.popBackStack() },

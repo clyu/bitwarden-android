@@ -22,6 +22,7 @@ upstream.
 - [How the app hands its requests over](#how-the-app-hands-its-requests-over)
 - [The vault folder](#the-vault-folder)
 - [Logging in on the device](#logging-in-on-the-device)
+- [Changing how the master key is derived](#changing-how-the-master-key-is-derived)
 - [Making sure nothing reaches a real server](#making-sure-nothing-reaches-a-real-server)
 - [What is changed in upstream files](#what-is-changed-in-upstream-files)
 - [Updating from upstream](#updating-from-upstream)
@@ -138,6 +139,50 @@ it was, which is Bitwarden in the United States unless another one was chosen in
 version of the app. `AccountSummary.environmentLabel` is still filled in, as the landing screen
 tells by it whether an account is already logged in.
 
+## Changing how the master key is derived
+
+**Settings › Account security › Encryption key settings** changes how the master key is derived
+from the master password: with PBKDF2-SHA256 or with Argon2id, and with how much work. Upstream has
+that page only in the web vault, which does not exist here; the app itself only raises
+PBKDF2-SHA256 iterations that are below the minimum, when a feature flag of the Bitwarden server
+turns that on. The screen offers the same settings as the one of the browser extension, and takes
+only the values that it takes (`KdfSettingsConstants`): the local vault takes any settings, and a
+master key that a client cannot derive with them would leave the account impossible to unlock or to
+log in to. Its texts are in `strings_local_vault.xml`, apart from those that upstream has.
+
+Once the master password is confirmed, the SDK encrypts the user key again with the master key that
+the new settings derive (`makeUpdateKdf`), and `KdfSettingsManager` sends it to the local vault
+with the API service of upstream (`POST accounts/kdf`), which keeps it in place of the one before,
+along with what the master password is recognized by now. The SDK does not send it itself, as the
+requests that it makes are never answered (see below). The user key stays the same, so the items do
+not change, and no device is logged out.
+
+The SDK keeps the settings that the vault was unlocked with until it is locked. They are the ones
+from before once a sync took a change from another device, so the app proves the master password
+with the hash of the settings that the account has, and not with the one that the SDK derives. The
+screen syncs before it shows the settings, as the one of the browser extension does, as a change
+made with the settings from before would be refused as if the master password were wrong. If the
+local vault refuses it all the same, as another device changed the settings in the meantime, the
+screen syncs again and asks the user to try again.
+
+The other devices that share the vault folder take the new settings at their next sync. Until then,
+a device that has not synced still unlocks with the settings from before, but when it proves the
+master password to the local vault, such as to delete the account, the master password is taken to
+be wrong.
+
+Stronger settings do not protect a copy of the vault folder that was made before, nor what the
+folder keeps from before: the user key encrypted with the master key of the settings from before
+stays in it in the same places as after a change of the master password (DESIGN.md, "Limits to
+keep in mind"), and the master password is as easy to guess from it as it was.
+
+The app checks the master password, such as before it shows an item that asks for it again, against
+a hash that it keeps from the last time that the vault was unlocked with it, by comparing it with
+the hash that the SDK derives with the settings that the vault was unlocked with. Once the settings
+changed, on this device or on another one, and the vault was unlocked with the new ones in another
+way than with the master password, such as with biometrics, the two no longer match.
+`AuthRepositoryImpl.validatePassword` then checks the master password against the user key instead,
+as it does when it keeps no hash, and keeps the hash of the new settings.
+
 ## Making sure nothing reaches a real server
 
 The measures of the local vault apply (see "Making sure nothing reaches a real server" in
@@ -179,7 +224,9 @@ Everything else is new: the files in the directories of the code map below, the 
 | `app/.../ui/platform/feature/settings/other/` | The setting for the vault folder. |
 | `app/.../ui/auth/feature/landing/LandingScreen.kt`, `.../startregistration/StartRegistrationScreen.kt`, `.../login/LoginScreen.kt`, `.../vaultunlock/VaultUnlockScreen.kt`, and their tests | Logging in on the device: no server is named, and the landing screen and the screen for creating an account have no selector of the environment. |
 | `ui/.../components/account/BitwardenAccountSwitcher.kt`, `.../account/dialog/BitwardenLogoutConfirmationDialog.kt`, `.../account/dialog/BitwardenRemovalConfirmationDialog.kt`, `ui/src/testFixtures/.../BitwardenAccountSwitcherTestHelpers.kt` | The account switcher and its dialogs name no environment. |
-| `.github/workflows/android.yml` | Builds the local vault with the app, and runs the tests of the local vault. |
+| `app/.../ui/platform/feature/settings/accountsecurity/AccountSecurityScreen.kt`, `.../AccountSecurityViewModel.kt`, `.../AccountSecurityNavigation.kt`, `.../settings/SettingsNavigation.kt`, and the tests of the first two | The row of the encryption key settings, and the route to their screen (`.../accountsecurity/kdfsettings/`). |
+| `app/.../auth/repository/AuthRepositoryImpl.kt`, and its test | `validatePassword` checks the master password against the user key when the hash that it keeps is that of other KDF settings than the ones the vault was unlocked with. |
+| `.github/workflows/android.yml` | Builds the local vault with the app, and runs the tests of the local vault and those of the parts of the app that this fork changed. |
 
 ## Updating from upstream
 
@@ -251,10 +298,12 @@ attachments.
 |------|---------|
 | `local-vault-rs/` | The local vault in Rust, a submodule: the route table, the handlers, the vault store, the rules that the app checks itself against, and its tests. |
 | `network/build.gradle.kts` | Builds the local vault and generates its Kotlin. |
-| `network/src/main/kotlin/com/bitwarden/network/local/` | `LocalServer`, which hands requests to the local vault, the interceptor, the file-system interface and its implementation on ordinary files, and the copy of the accounts, and of the files of the app in the accounts that the other folder has, to another folder. |
+| `network/src/main/kotlin/com/bitwarden/network/local/` | `LocalServer`, which hands requests to the local vault, the interceptor, the file-system interface and its implementation on ordinary files, the copy of the accounts, and of the files of the app in the accounts that the other folder has, to another folder, and how a request fails that the local vault refused (`isBadRequest`). |
 | `network/.../retrofit/RetrofitsImpl.kt` | Where the interceptor is installed on each HTTP client. |
 | `app/src/main/kotlin/com/x8bit/bitwarden/data/platform/manager/localvault/` | The vault folder: the manager, the implementation of the file system on a folder the user chose, and the addresses that cannot be reached. |
 | `app/.../datasource/network/di/PlatformNetworkModule.kt` | Where the app hands the file system and the addresses to the network layer. |
 | `app/.../manager/network/NetworkConnectionManagerImpl.kt` | The network that is always connected. |
 | `app/.../ui/platform/feature/settings/other/` | The setting for the vault folder. |
+| `app/.../data/auth/manager/KdfSettingsManager.kt`, `KdfSettingsManagerImpl.kt`, `.../manager/di/KdfSettingsManagerModule.kt`, `.../manager/model/ChangeKdfResult.kt`, `app/.../data/auth/util/KdfSettingsConstants.kt` | Changing how the master key is derived, and the settings that it may be changed to. |
+| `app/.../ui/platform/feature/settings/accountsecurity/kdfsettings/` | The screen of the encryption key settings. |
 | `network/src/test/kotlin/com/bitwarden/network/local/` | Tests of the local server as the app uses it: through the interceptor, with the API services of the app, for every request that the app can make, for its feature flags, and for its file system. How the local server behaves is tested in `local-vault-rs`. |
