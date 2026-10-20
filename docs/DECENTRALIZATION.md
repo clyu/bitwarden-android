@@ -147,9 +147,9 @@ from the master password: with PBKDF2-SHA256 or with Argon2id, and with how much
 that page only in the web vault, which does not exist here; the app itself only raises
 PBKDF2-SHA256 iterations that are below the minimum, when a feature flag of the Bitwarden server
 turns that on. The screen offers the same settings as the one of the browser extension, and takes
-only the values that it takes (`KdfSettingsConstants`): the local vault takes any settings, and a
-master key that a client cannot derive with them would leave the account impossible to unlock or to
-log in to. Its texts are in `strings_local_vault.xml`, apart from those that upstream has.
+only the values that it takes (`KdfSettingsConstants`). The local vault takes all of them: it
+refuses settings outside of the ranges of the Bitwarden server (DESIGN.md, "How each job of the
+server is done"). Its texts are in `strings_local_vault.xml`, apart from those that upstream has.
 
 Once the master password is confirmed, the SDK encrypts the user key again with the master key that
 the new settings derive (`makeUpdateKdf`), and `KdfSettingsManager` sends it to the local vault

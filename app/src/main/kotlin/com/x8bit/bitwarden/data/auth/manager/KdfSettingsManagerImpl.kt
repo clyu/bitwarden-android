@@ -41,8 +41,8 @@ class KdfSettingsManagerImpl(
             ?.toKdf()
 
     override suspend fun changeKdf(masterPassword: String, kdf: Kdf): ChangeKdfResult {
-        // The vault takes any settings, and a master key that a client cannot derive with them
-        // would leave the account impossible to unlock or to log in to.
+        // Only allowed settings are sent: the SDK derives a master key with them before the local
+        // vault can refuse them, and a refusal would be taken for a rejected master password.
         if (!kdf.isAllowedSetting()) {
             return ChangeKdfResult.Error(
                 error = IllegalArgumentException("The KDF settings are not allowed."),
