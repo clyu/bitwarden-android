@@ -115,9 +115,10 @@ files of the directory of the app in the account, which the folder has otherwise
 and the content of attachments that the folder does not have. No other device writes that
 directory, so the files that the app has are the ones that it wrote last, as when the folder was
 filled with a copy of the storage of the app from before its last changes. The files of other
-devices are never copied. What is copied is the rule of the local vault (`accountsMissingIn`,
-`deviceFilesMissingIn`), which `LocalVaultCopyTest` checks the copy against: the copy does not
-call the local vault, so that the unit tests of the app do not need its library.
+devices are never copied. What is copied is worked out by the local vault (`accountsMissingIn`,
+`deviceFilesMissingIn`), and `LocalVaultCopier` only copies it, as a stream. The manager is
+given the copier, so that the unit tests of the app do not need the library of the local vault.
+`LocalVaultCopierTest`, in the network module, tests the copy with the local vault.
 
 The folder can only be changed while no account is logged in, as the cached data of a logged-in
 account would belong to a vault that is not in the new folder. The file system that the network
@@ -298,7 +299,7 @@ attachments.
 |------|---------|
 | `local-vault-rs/` | The local vault in Rust, a submodule: the route table, the handlers, the vault store, the rules that the app checks itself against, and its tests. |
 | `network/build.gradle.kts` | Builds the local vault and generates its Kotlin. |
-| `network/src/main/kotlin/com/bitwarden/network/local/` | `LocalServer`, which hands requests to the local vault, the interceptor, the file-system interface and its implementation on ordinary files, the copy of the accounts, and of the files of the app in the accounts that the other folder has, to another folder, and how a request fails that the local vault refused (`isBadRequest`). |
+| `network/src/main/kotlin/com/bitwarden/network/local/` | `LocalServer`, which hands requests to the local vault, the interceptor, the file-system interface and its implementation on ordinary files, the copy of the accounts, and of the files of the app in the accounts that the other folder has, to another folder (`LocalVaultCopier`), and how a request fails that the local vault refused (`isBadRequest`). |
 | `network/.../retrofit/RetrofitsImpl.kt` | Where the interceptor is installed on each HTTP client. |
 | `app/src/main/kotlin/com/x8bit/bitwarden/data/platform/manager/localvault/` | The vault folder: the manager, the implementation of the file system on a folder the user chose, and the addresses that cannot be reached. |
 | `app/.../datasource/network/di/PlatformNetworkModule.kt` | Where the app hands the file system and the addresses to the network layer. |

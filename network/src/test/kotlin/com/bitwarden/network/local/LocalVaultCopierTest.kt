@@ -1,17 +1,28 @@
 package com.bitwarden.network.local
 
-import com.bitwarden.localvault.accountsMissingIn
-import com.bitwarden.localvault.deviceFilesMissingIn
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.io.File
+import java.io.IOException
+import java.io.OutputStream
 import java.nio.file.Files
 
-class LocalVaultCopyTest {
+/**
+ * Tests the [LocalVaultCopierImpl] with the local vault, which works out what it copies.
+ */
+class LocalVaultCopierTest {
     private val root: File = Files.createTempDirectory("local-vault").toFile()
     private val targetRoot: File = Files.createTempDirectory("local-vault-target").toFile()
+    private val source = FileLocalVaultFileSystem(root = root)
+    private val target = FileLocalVaultFileSystem(root = targetRoot)
+
+    private val localVaultCopier: LocalVaultCopier = LocalVaultCopierImpl()
 
     @AfterEach
     fun tearDown() {
@@ -20,7 +31,7 @@ class LocalVaultCopyTest {
     }
 
     @Test
-    fun `copyMissingAccountsTo should copy the accounts that the target does not have`() {
+    fun `copy should copy the accounts that the target does not have`() {
         writeFile(root = root, path = "$ACCOUNT_ID/vault.json", content = "first")
         writeFile(root = root, path = "$ACCOUNT_ID/attachments/$CIPHER_ID/$ATTACHMENT_ID")
         writeFile(root = root, path = "$OTHER_ACCOUNT_ID/vault.json", content = "source")
@@ -28,8 +39,7 @@ class LocalVaultCopyTest {
         // Not an account, as its name could not be the ID of one.
         writeFile(root = root, path = "notes.txt", content = "mockNotes")
 
-        FileLocalVaultFileSystem(root = root)
-            .copyMissingAccountsTo(target = FileLocalVaultFileSystem(root = targetRoot))
+        localVaultCopier.copy(source = source, target = target, deviceId = DEVICE_ID)
 
         assertEquals("first", File(targetRoot, "$ACCOUNT_ID/vault.json").readText())
         assertArrayEquals(
@@ -45,40 +55,10 @@ class LocalVaultCopyTest {
     }
 
     @Test
-    fun `missingAccountsIn should find the accounts that the local vault finds`() {
-        // Names that the local vault could have given an account, up to the longest one.
-        val longestAccountId = "x".repeat(n = 128)
-        listOf(ACCOUNT_ID, OTHER_ACCOUNT_ID, "MOCK_ACCOUNT_ID_3", longestAccountId).forEach {
-            writeFile(root = root, path = "$it/vault.json", content = "source")
-        }
-        writeFile(root = targetRoot, path = "$OTHER_ACCOUNT_ID/vault.json", content = "target")
-        // Names that it could not have: too long, or with a character that it does not use.
-        listOf("x".repeat(n = 129), "mockAccountId~4", "mockAccountId 5", "mockAccountIdé")
-            .forEach { writeFile(root = root, path = "$it/vault.json", content = "mockOther") }
-        writeFile(root = root, path = "notes.txt", content = "mockNotes")
-        val source = FileLocalVaultFileSystem(root = root)
-        val target = FileLocalVaultFileSystem(root = targetRoot)
-
-        val missing = source.missingAccountsIn(target = target)
-
-        assertEquals(listOf("MOCK_ACCOUNT_ID_3", ACCOUNT_ID, longestAccountId), missing)
-        assertEquals(
-            accountsMissingIn(
-                source = FileSystemCallback(fileSystem = source),
-                target = FileSystemCallback(fileSystem = target),
-            ),
-            missing,
-        )
-    }
-
-    @Test
-    fun `copyDeviceFilesTo should copy what the device wrote to an account that the target has`() {
+    fun `copy should copy what the device wrote to an account that the target has`() {
         writeDeviceAccount()
 
-        FileLocalVaultFileSystem(root = root).copyDeviceFilesTo(
-            target = FileLocalVaultFileSystem(root = targetRoot),
-            deviceId = DEVICE_ID,
-        )
+        localVaultCopier.copy(source = source, target = target, deviceId = DEVICE_ID)
 
         assertEquals("latest", File(targetRoot, "$DEVICE_DIRECTORY/vault.json").readText())
         assertEquals("older", File(targetRoot, "$DEVICE_DIRECTORY/vault.json.bak").readText())
@@ -88,38 +68,58 @@ class LocalVaultCopyTest {
         )
         // The file of another device is the one that the target had.
         assertEquals("newer", File(targetRoot, "$OTHER_DEVICE_DIRECTORY/vault.json").readText())
-        // An account that the target does not have is left to copyMissingAccountsTo.
-        assertEquals(listOf(ACCOUNT_ID), targetRoot.list().orEmpty().toList())
     }
 
     @Test
-    fun `missingDeviceFilesIn should find the files that the local vault finds`() {
+    fun `copy should write the files in the order that the local vault gives them`() {
         writeDeviceAccount()
-        val source = FileLocalVaultFileSystem(root = root)
-        val target = FileLocalVaultFileSystem(root = targetRoot)
+        val written = mutableListOf<List<String>>()
+        val recordingTarget = object : LocalVaultFileSystem by target {
+            override fun openOutput(path: List<String>): OutputStream =
+                target.openOutput(path = path).also { written.add(path) }
+        }
 
-        val missing = source.missingDeviceFilesIn(target = target, deviceId = DEVICE_ID)
+        localVaultCopier.copy(source = source, target = recordingTarget, deviceId = DEVICE_ID)
 
         assertEquals(
             listOf(
+                // The account that the target does not have, with everything in it.
+                listOf(OTHER_ACCOUNT_ID, "devices", DEVICE_ID, "vault.json"),
+                // The content of an attachment before the file that lists it.
                 listOf(ACCOUNT_ID, "attachments", CIPHER_ID, OTHER_ATTACHMENT_ID),
                 listOf(ACCOUNT_ID, "devices", DEVICE_ID, "vault.json"),
             ),
-            missing,
+            written,
         )
-        assertEquals(
-            deviceFilesMissingIn(
-                source = FileSystemCallback(fileSystem = source),
-                target = FileSystemCallback(fileSystem = target),
+    }
+
+    @Test
+    fun `copy should copy nothing of an account that the target has for an invalid device ID`() {
+        writeDeviceAccount()
+
+        localVaultCopier.copy(source = source, target = target, deviceId = "mock/DeviceId")
+
+        assertEquals("earlier", File(targetRoot, "$DEVICE_DIRECTORY/vault.json").readText())
+        val attachment = File(targetRoot, "$ACCOUNT_ID/attachments/$CIPHER_ID/$OTHER_ATTACHMENT_ID")
+        assertFalse(attachment.exists())
+    }
+
+    @Test
+    fun `copy should throw an IOException when the target cannot be reached`() {
+        writeFile(root = root, path = "$ACCOUNT_ID/vault.json", content = "first")
+        val unreachableTarget: LocalVaultFileSystem = mockk {
+            every { exists(path = any()) } throws IOException("mockMessage")
+        }
+
+        val exception = assertThrows<IOException> {
+            localVaultCopier.copy(
+                source = source,
+                target = unreachableTarget,
                 deviceId = DEVICE_ID,
-            ),
-            missing,
-        )
-        // Nothing for an ID that could not be the name of a directory.
-        assertEquals(
-            emptyList<List<String>>(),
-            source.missingDeviceFilesIn(target = target, deviceId = "mock/DeviceId"),
-        )
+            )
+        }
+
+        assertEquals("mockMessage", exception.message)
     }
 
     /**

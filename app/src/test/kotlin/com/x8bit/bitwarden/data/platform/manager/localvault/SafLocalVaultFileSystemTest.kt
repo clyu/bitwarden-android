@@ -4,8 +4,6 @@ import android.content.ContentResolver
 import android.database.Cursor
 import android.net.Uri
 import android.provider.DocumentsContract
-import com.bitwarden.network.local.FileLocalVaultFileSystem
-import com.bitwarden.network.local.copyMissingAccountsTo
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -24,16 +22,13 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
-import java.io.File
 import java.io.IOException
-import java.nio.file.Files
 
 /**
  * Tests the [SafLocalVaultFileSystem] against a folder that only exists in this test, which
  * stands in for what the Storage Access Framework and a documents provider do on a device.
  */
 class SafLocalVaultFileSystemTest {
-    private val sourceRoot: File = Files.createTempDirectory("local-vault").toFile()
     private val treeUri: Uri = mockk()
     private val contentResolver: ContentResolver = mockk()
 
@@ -125,7 +120,6 @@ class SafLocalVaultFileSystemTest {
     @AfterEach
     fun tearDown() {
         unmockkStatic(DocumentsContract::class)
-        sourceRoot.deleteRecursively()
     }
 
     @Test
@@ -307,12 +301,9 @@ class SafLocalVaultFileSystemTest {
     }
 
     @Test
-    fun `a vault that is copied to the folder should have all of its files in it`() {
-        val source = FileLocalVaultFileSystem(root = sourceRoot)
-        source.openOutput(path = listOf(ACCOUNT_ID, VAULT_FILE)).use { it.write(CONTENT) }
-        source.openOutput(path = ATTACHMENT_PATH).use { it.write(OTHER_CONTENT) }
-
-        source.copyMissingAccountsTo(target = fileSystem)
+    fun `openOutput should create a directory that files share only once`() {
+        fileSystem.openOutput(path = listOf(ACCOUNT_ID, VAULT_FILE)).use { it.write(CONTENT) }
+        fileSystem.openOutput(path = ATTACHMENT_PATH).use { it.write(OTHER_CONTENT) }
 
         assertArrayEquals(CONTENT, documentAt(path = listOf(ACCOUNT_ID, VAULT_FILE))?.content)
         assertArrayEquals(OTHER_CONTENT, documentAt(path = ATTACHMENT_PATH)?.content)
