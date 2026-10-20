@@ -24,4 +24,9 @@
     <string name="kdf_memory_must_be_between_x_and_y_mb">KDF memory must be between %1$,d and %2$,d MB.</string>
     <string name="kdf_parallelism_must_be_between_x_and_y">KDF parallelism must be between %1$,d and %2$,d.</string>
     <string name="your_encryption_key_settings_were_changed_on_another_device_try_again">Your encryption key settings were changed on another device. Try again.</string>
+    <string name="you_will_be_logged_out_of_this_device_desc_long">You will be logged out of this device and need to log in again with your new master password. The other devices that share the vault folder are logged out after their next sync.</string>
+    <string name="anyone_who_can_read_the_vault_folder_can_read_the_hint">Anyone who can read the vault folder can read the hint.</string>
+    <string name="changing_your_master_password_does_not_lock_out_desc_long">Changing your master password does not lock out someone who knows the old one: the vault folder, and any copy of it, can still hold the key of your vault encrypted with the old master password. If someone else may know your master password, export your vault, import it into a new account, and delete this account instead.</string>
+    <string name="your_new_master_password_cannot_be_the_same_as_your_current_one">Your new master password cannot be the same as your current one.</string>
+    <string name="your_master_password_hint_cannot_be_the_same_as_your_master_password">Your master password hint cannot be the same as your master password.</string>
 </resources>

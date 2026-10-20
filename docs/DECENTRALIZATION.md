@@ -23,6 +23,7 @@ upstream.
 - [The vault folder](#the-vault-folder)
 - [Logging in on the device](#logging-in-on-the-device)
 - [Changing how the master key is derived](#changing-how-the-master-key-is-derived)
+- [Changing the master password](#changing-the-master-password)
 - [Making sure nothing reaches a real server](#making-sure-nothing-reaches-a-real-server)
 - [What is changed in upstream files](#what-is-changed-in-upstream-files)
 - [Updating from upstream](#updating-from-upstream)
@@ -155,16 +156,18 @@ Once the master password is confirmed, the SDK encrypts the user key again with 
 the new settings derive (`makeUpdateKdf`), and `KdfSettingsManager` sends it to the local vault
 with the API service of upstream (`POST accounts/kdf`), which keeps it in place of the one before,
 along with what the master password is recognized by now. The SDK does not send it itself, as the
-requests that it makes are never answered (see below). The user key stays the same, so the items do
-not change, and no device is logged out.
+requests that it makes are never answered (see below). For the same reason, the app does not change
+the settings with the client of the SDK that is meant for that, `user_crypto_management()`, whose
+`change_kdf` sends the request itself. The user key stays the same, so the items do not change, and
+no device is logged out.
 
 The SDK keeps the settings that the vault was unlocked with until it is locked. They are the ones
-from before once a sync took a change from another device, so the app proves the master password
-with the hash of the settings that the account has, and not with the one that the SDK derives. The
-screen syncs before it shows the settings, as the one of the browser extension does, as a change
-made with the settings from before would be refused as if the master password were wrong. If the
-local vault refuses it all the same, as another device changed the settings in the meantime, the
-screen syncs again and asks the user to try again.
+from before once the settings changed, on this device or on another one whose change a sync took,
+so the app proves the master password with the hash of the settings that the account has, and not
+with the one that the SDK derives. The screen syncs before it shows the settings, as the one of the
+browser extension does, as a change made with the settings from before would be refused as if the
+master password were wrong. If the local vault refuses it all the same, as another device changed
+the settings in the meantime, the screen syncs again and asks the user to try again.
 
 The other devices that share the vault folder take the new settings at their next sync. Until then,
 a device that has not synced still unlocks with the settings from before, but when it proves the
@@ -183,6 +186,60 @@ changed, on this device or on another one, and the vault was unlocked with the n
 way than with the master password, such as with biometrics, the two no longer match.
 `AuthRepositoryImpl.validatePassword` then checks the master password against the user key instead,
 as it does when it keeps no hash, and keeps the hash of the new settings.
+
+## Changing the master password
+
+**Settings › Account security › Change master password** changes the master password in the app,
+where upstream opens the web vault for it, which does not exist here. The screen asks for the
+current master password, for the new one twice and for a hint. It takes a new master password of at
+least 12 characters that is not the current one, and a hint that is not the new master password, as
+whoever can read the vault folder can read the hint. Like the screen that creates an account, it
+asks the user to confirm a new master password that is weak, and, unless the user turns that check
+off, one that Have I Been Pwned knows from a data breach (see "Making sure nothing reaches a real
+server"). A check of Have I Been Pwned that fails does not keep the master password from being
+changed. The hint replaces the one before, which the app does not keep, so the field starts empty,
+and a master password that is changed without a hint has none. Its texts are in
+`strings_local_vault.xml`, apart from those that upstream has.
+
+The app checks the current master password itself first, so that one that is mistyped is told as
+such before the new one is checked against data breaches, or anything is sent to the local vault.
+`MasterPasswordManager` then has the SDK encrypt the user key with the master key of the new
+master password, and sends it to the local vault with the API service of upstream
+(`POST accounts/password`), which keeps it in place of the one before, along with what the new
+master password is recognized by, its hint and a new security stamp. The user key stays the same,
+so the items do not change. The new security stamp logs the account out of the other devices that
+share the vault folder at their next sync, as they unlock it with the old master password. The app
+logs it out of this device right away, as upstream does once the master password is reset, and the
+account is logged in to again with the new master password.
+
+The current master password is proven with the hash of the KDF settings that the account has, as
+for the encryption key settings, and the new master key is derived with them as well, as the local
+vault takes a new master password with no other settings. The password reset of upstream
+(`AuthRepository.resetPassword`) cannot be used for it: the SDK derives the new master key there
+(`makeUpdatePassword`) with the settings that the vault was unlocked with, which are the ones from
+before once the settings changed, on this device or on another one whose change a sync took.
+Upstream does not have to expect that: its app has no screen that changes the settings, and a
+change of them logs every other device out there. The vault would then keep the user key encrypted
+with a master key that the settings of the account do not derive, and the account could no longer
+be unlocked or logged in to. `MasterPasswordManager` has the SDK derive it with `makeUpdateKdf`
+instead, given the new master password and the settings of the account. The SDK says in the
+documentation of that function that it is deprecated, and points to its client
+`user_crypto_management()` instead, which the app cannot use here: that client sends its requests
+itself (see "Changing how the master key is derived"), and changes the master password only along
+with the user key (`password_change_and_rotate_user_keys`). The browser extension changes the
+settings with its `change_kdf`, as the requests of its SDK reach the local vault, and the master
+password with functions that only the SDK for JavaScript has (`PureCrypto`). Once `makeUpdateKdf`
+is removed, this and the encryption key settings therefore need another way to derive a master key
+with settings that they give.
+
+Like the screen of the encryption key settings, the screen syncs before it shows the form. If the
+local vault refuses the current master password all the same, it syncs again: a change of the
+master password on another device logs the account out of this one, and a change of the settings
+has the user try again.
+
+A new master password does not lock out whoever knows the old one: the vault folder, and any copy
+of it, can still hold the user key encrypted with the master key of the old one (DESIGN.md, "Limits
+to keep in mind"). The screen says so, and what to do if someone else may know the master password.
 
 ## Making sure nothing reaches a real server
 
@@ -225,7 +282,7 @@ Everything else is new: the files in the directories of the code map below, the 
 | `app/.../ui/platform/feature/settings/other/` | The setting for the vault folder. |
 | `app/.../ui/auth/feature/landing/LandingScreen.kt`, `.../startregistration/StartRegistrationScreen.kt`, `.../login/LoginScreen.kt`, `.../vaultunlock/VaultUnlockScreen.kt`, and their tests | Logging in on the device: no server is named, and the landing screen and the screen for creating an account have no selector of the environment. |
 | `ui/.../components/account/BitwardenAccountSwitcher.kt`, `.../account/dialog/BitwardenLogoutConfirmationDialog.kt`, `.../account/dialog/BitwardenRemovalConfirmationDialog.kt`, `ui/src/testFixtures/.../BitwardenAccountSwitcherTestHelpers.kt` | The account switcher and its dialogs name no environment. |
-| `app/.../ui/platform/feature/settings/accountsecurity/AccountSecurityScreen.kt`, `.../AccountSecurityViewModel.kt`, `.../AccountSecurityNavigation.kt`, `.../settings/SettingsNavigation.kt`, and the tests of the first two | The row of the encryption key settings, and the route to their screen (`.../accountsecurity/kdfsettings/`). |
+| `app/.../ui/platform/feature/settings/accountsecurity/AccountSecurityScreen.kt`, `.../AccountSecurityViewModel.kt`, `.../AccountSecurityNavigation.kt`, `.../settings/SettingsNavigation.kt`, and the tests of the first two | The row of the encryption key settings, and the route to their screen (`.../accountsecurity/kdfsettings/`). The row that changes the master password opens the screen of this fork (`.../accountsecurity/changemasterpassword/`) instead of the web vault. |
 | `app/.../auth/repository/AuthRepositoryImpl.kt`, and its test | `validatePassword` checks the master password against the user key when the hash that it keeps is that of other KDF settings than the ones the vault was unlocked with. |
 | `.github/workflows/android.yml` | Builds the local vault with the app, and runs the tests of the local vault and those of the parts of the app that this fork changed. |
 
@@ -307,4 +364,6 @@ attachments.
 | `app/.../ui/platform/feature/settings/other/` | The setting for the vault folder. |
 | `app/.../data/auth/manager/KdfSettingsManager.kt`, `KdfSettingsManagerImpl.kt`, `.../manager/di/KdfSettingsManagerModule.kt`, `.../manager/model/ChangeKdfResult.kt`, `app/.../data/auth/util/KdfSettingsConstants.kt` | Changing how the master key is derived, and the settings that it may be changed to. |
 | `app/.../ui/platform/feature/settings/accountsecurity/kdfsettings/` | The screen of the encryption key settings. |
+| `app/.../data/auth/manager/MasterPasswordManager.kt`, `MasterPasswordManagerImpl.kt`, `.../manager/di/MasterPasswordManagerModule.kt`, `.../manager/model/ChangeMasterPasswordResult.kt` | Changing the master password. |
+| `app/.../ui/platform/feature/settings/accountsecurity/changemasterpassword/` | The screen that changes the master password. |
 | `network/src/test/kotlin/com/bitwarden/network/local/` | Tests of the local server as the app uses it: through the interceptor, with the API services of the app, for every request that the app can make, for its feature flags, and for its file system. How the local server behaves is tested in `local-vault-rs`. |

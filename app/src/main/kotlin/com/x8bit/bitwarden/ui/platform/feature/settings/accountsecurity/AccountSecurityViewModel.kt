@@ -211,7 +211,8 @@ class AccountSecurityViewModel @Inject constructor(
     private fun handleBackClick() = sendEvent(AccountSecurityEvent.NavigateBack)
 
     private fun handleChangeMasterPasswordClick() {
-        sendEvent(AccountSecurityEvent.NavigateToChangeMasterPassword(webSettingsUrl))
+        // The master password is changed in the app, as this fork has no web vault.
+        sendEvent(AccountSecurityEvent.NavigateToChangeMasterPassword)
     }
 
     private fun handleConfirmLogoutClick() {
@@ -707,7 +708,7 @@ sealed class AccountSecurityEvent {
     /**
      * Navigate to the change master password screen.
      */
-    data class NavigateToChangeMasterPassword(val url: String) : AccountSecurityEvent()
+    data object NavigateToChangeMasterPassword : AccountSecurityEvent()
 
     /**
      * Shows the prompt for biometrics using with the given [cipher].

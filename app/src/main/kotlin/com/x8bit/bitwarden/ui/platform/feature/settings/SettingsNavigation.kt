@@ -18,6 +18,8 @@ import com.bitwarden.ui.platform.util.ParcelableRouteSerializer
 import com.x8bit.bitwarden.ui.platform.feature.settings.about.aboutDestination
 import com.x8bit.bitwarden.ui.platform.feature.settings.about.navigateToAbout
 import com.x8bit.bitwarden.ui.platform.feature.settings.accountsecurity.accountSecurityDestination
+import com.x8bit.bitwarden.ui.platform.feature.settings.accountsecurity.changemasterpassword.changeMasterPasswordDestination
+import com.x8bit.bitwarden.ui.platform.feature.settings.accountsecurity.changemasterpassword.navigateToChangeMasterPassword
 import com.x8bit.bitwarden.ui.platform.feature.settings.accountsecurity.kdfsettings.kdfSettingsDestination
 import com.x8bit.bitwarden.ui.platform.feature.settings.accountsecurity.kdfsettings.navigateToKdfSettings
 import com.x8bit.bitwarden.ui.platform.feature.settings.accountsecurity.navigateToAccountSecurity
@@ -158,9 +160,12 @@ fun NavGraphBuilder.settingsGraph(
             onNavigateToSetupUnlockScreen = onNavigateToSetupUnlockScreen,
             onNavigateToManageDevices = onNavigateToManageDevices,
             onNavigateToKdfSettings = { navController.navigateToKdfSettings() },
+            onNavigateToChangeMasterPassword = { navController.navigateToChangeMasterPassword() },
         )
         // The encryption key settings of this fork, which upstream has only in the web vault.
         kdfSettingsDestination(onNavigateBack = { navController.popBackStack() })
+        // Changing the master password, which upstream leaves to the web vault.
+        changeMasterPasswordDestination(onNavigateBack = { navController.popBackStack() })
         appearanceDestination(
             isPreAuth = false,
             onNavigateBack = { navController.popBackStack() },

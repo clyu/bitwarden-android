@@ -88,6 +88,7 @@ fun AccountSecurityScreen(
     onNavigateToSetupUnlockScreen: () -> Unit,
     onNavigateToManageDevices: () -> Unit,
     onNavigateToKdfSettings: () -> Unit,
+    onNavigateToChangeMasterPassword: () -> Unit,
     viewModel: AccountSecurityViewModel = hiltViewModel(),
     biometricsManager: BiometricsManager = LocalBiometricsManager.current,
     intentManager: IntentManager = LocalIntentManager.current,
@@ -118,7 +119,7 @@ fun AccountSecurityScreen(
             }
 
             is AccountSecurityEvent.NavigateToChangeMasterPassword -> {
-                intentManager.launchUri(event.url.toUri())
+                onNavigateToChangeMasterPassword()
             }
 
             is AccountSecurityEvent.NavigateToManageDevices -> onNavigateToManageDevices()
@@ -389,16 +390,12 @@ fun AccountSecurityScreen(
                 )
             }
             if (state.isUnlockWithPasswordEnabled) {
-                BitwardenExternalLinkRow(
+                // The master password is changed in the app, as this fork has no web vault.
+                BitwardenTextRow(
                     text = stringResource(id = BitwardenString.change_master_password),
-                    onConfirmClick = {
+                    onClick = {
                         viewModel.trySendAction(AccountSecurityAction.ChangeMasterPasswordClick)
                     },
-                    withDivider = false,
-                    dialogTitle = stringResource(id = BitwardenString.continue_to_web_app),
-                    dialogMessage = stringResource(
-                        id = BitwardenString.change_master_password_description_long,
-                    ),
                     cardStyle = CardStyle.Middle(),
                     modifier = Modifier
                         .standardHorizontalMargin()

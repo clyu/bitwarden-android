@@ -55,6 +55,7 @@ class AccountSecurityScreenTest : BitwardenComposeTest() {
     private var onNavigateToUnlockSetupScreenCalled = false
     private var onNavigateToManageDevicesCalled = false
     private var onNavigateToKdfSettingsCalled = false
+    private var onNavigateToChangeMasterPasswordCalled = false
 
     private val intentManager = mockk<IntentManager> {
         every { launchUri(any()) } just runs
@@ -97,6 +98,9 @@ class AccountSecurityScreenTest : BitwardenComposeTest() {
                 onNavigateToSetupUnlockScreen = { onNavigateToUnlockSetupScreenCalled = true },
                 onNavigateToManageDevices = { onNavigateToManageDevicesCalled = true },
                 onNavigateToKdfSettings = { onNavigateToKdfSettingsCalled = true },
+                onNavigateToChangeMasterPassword = {
+                    onNavigateToChangeMasterPasswordCalled = true
+                },
                 viewModel = viewModel,
             )
         }
@@ -1409,28 +1413,20 @@ class AccountSecurityScreenTest : BitwardenComposeTest() {
         verify { intentManager.launchUri(uri.toUri()) }
     }
 
-    @Suppress("MaxLineLength")
     @Test
-    fun `on change master password click should display confirmation dialog and confirm should send ChangeMasterPasswordClick`() {
-        composeTestRule.onNode(isDialog()).assertDoesNotExist()
+    fun `on change master password click should send ChangeMasterPasswordClick`() {
         composeTestRule
             .onNodeWithText("Change master password")
             .performScrollTo()
-            .performClick()
-        composeTestRule.onNode(isDialog()).assertExists()
-        composeTestRule
-            .onAllNodesWithText("Continue")
-            .filterToOne(hasAnyAncestor(isDialog()))
             .performClick()
         composeTestRule.onNode(isDialog()).assertDoesNotExist()
         verify { viewModel.trySendAction(AccountSecurityAction.ChangeMasterPasswordClick) }
     }
 
     @Test
-    fun `on NavigateToChangeMasterPassword should call launchUri on intentManager`() {
-        val uri = "testUri"
-        mutableEventFlow.tryEmit(AccountSecurityEvent.NavigateToChangeMasterPassword(uri))
-        verify { intentManager.launchUri(uri.toUri()) }
+    fun `on NavigateToChangeMasterPassword should call onNavigateToChangeMasterPassword`() {
+        mutableEventFlow.tryEmit(AccountSecurityEvent.NavigateToChangeMasterPassword)
+        assertTrue(onNavigateToChangeMasterPasswordCalled)
     }
 
     @Test
