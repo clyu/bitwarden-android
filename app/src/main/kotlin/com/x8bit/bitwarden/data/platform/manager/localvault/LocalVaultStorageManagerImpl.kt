@@ -7,9 +7,8 @@ import android.provider.DocumentsContract
 import androidx.core.net.toUri
 import com.bitwarden.core.data.manager.dispatcher.DispatcherManager
 import com.bitwarden.network.local.FileLocalVaultFileSystem
+import com.bitwarden.network.local.LocalVaultCopier
 import com.bitwarden.network.local.LocalVaultFileSystem
-import com.bitwarden.network.local.copyDeviceFilesTo
-import com.bitwarden.network.local.copyMissingAccountsTo
 import com.bitwarden.network.provider.AppIdProvider
 import com.x8bit.bitwarden.data.platform.datasource.disk.LocalVaultDiskSource
 import com.x8bit.bitwarden.data.platform.manager.localvault.model.SetVaultFolderResult
@@ -32,6 +31,7 @@ private const val FOLDER_PERMISSIONS: Int =
 class LocalVaultStorageManagerImpl(
     private val context: Context,
     private val localVaultDiskSource: LocalVaultDiskSource,
+    private val localVaultCopier: LocalVaultCopier,
     private val appIdProvider: AppIdProvider,
     private val dispatcherManager: DispatcherManager,
 ) : LocalVaultStorageManager {
@@ -63,15 +63,14 @@ class LocalVaultStorageManagerImpl(
         withContext(context = dispatcherManager.io) {
             try {
                 context.contentResolver.takePersistableUriPermission(uri, FOLDER_PERMISSIONS)
-                val source = currentFileSystem()
-                val target = SafLocalVaultFileSystem(
-                    contentResolver = context.contentResolver,
-                    treeUri = uri,
+                localVaultCopier.copy(
+                    source = currentFileSystem(),
+                    target = SafLocalVaultFileSystem(
+                        contentResolver = context.contentResolver,
+                        treeUri = uri,
+                    ),
+                    deviceId = appIdProvider.uniqueAppId,
                 )
-                source.copyMissingAccountsTo(target = target)
-                // Of the accounts that the folder already has, what the app wrote last, as when
-                // the folder was filled with a copy of the vault from before its last changes.
-                source.copyDeviceFilesTo(target = target, deviceId = appIdProvider.uniqueAppId)
                 localVaultDiskSource.vaultFolderUri = uri.toString()
                 SetVaultFolderResult.Success
             } catch (e: IOException) {

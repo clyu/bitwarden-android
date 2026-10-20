@@ -20,8 +20,10 @@ interface LocalVaultStorageManager {
     val vaultFolderName: String?
 
     /**
-     * Keeps the vault in the folder with the given [uri] from now on. The accounts that exist
-     * where the vault was kept so far are copied to the folder, unless it already has them.
+     * Keeps the vault in the folder with the given [uri] from now on. What the folder does not
+     * have yet of the vault where it was kept so far is copied to it: the accounts that it does
+     * not have, and what this installation wrote of those that it has. Nothing that another
+     * device wrote is replaced.
      */
     suspend fun setVaultFolder(uri: Uri): SetVaultFolderResult
 }
