@@ -328,33 +328,14 @@ class AccountSecurityViewModelTest : BaseViewModelTest() {
         }
     }
 
-    @Suppress("MaxLineLength")
     @Test
-    fun `on ChangeMasterPasswordClick should emit NavigateToChangeMasterPassword with correct URL based on US and EU environments`() =
-        runTest {
-            fakeEnvironmentRepository.environment = Environment.Prod.Us
-            val viewModel = createViewModel()
-            viewModel.eventFlow.test {
-
-                viewModel.trySendAction(AccountSecurityAction.ChangeMasterPasswordClick)
-                assertEquals(
-                    AccountSecurityEvent.NavigateToChangeMasterPassword(
-                        "https://vault.bitwarden.com/#/settings",
-                    ),
-                    awaitItem(),
-                )
-
-                fakeEnvironmentRepository.environment = Environment.Prod.Eu
-
-                viewModel.trySendAction(AccountSecurityAction.ChangeMasterPasswordClick)
-                assertEquals(
-                    AccountSecurityEvent.NavigateToChangeMasterPassword(
-                        "https://vault.bitwarden.eu/#/settings",
-                    ),
-                    awaitItem(),
-                )
-            }
+    fun `on ChangeMasterPasswordClick should emit NavigateToChangeMasterPassword`() = runTest {
+        val viewModel = createViewModel()
+        viewModel.eventFlow.test {
+            viewModel.trySendAction(AccountSecurityAction.ChangeMasterPasswordClick)
+            assertEquals(AccountSecurityEvent.NavigateToChangeMasterPassword, awaitItem())
         }
+    }
 
     @Test
     fun `on DeleteAccountClick should emit NavigateToDeleteAccount`() = runTest {

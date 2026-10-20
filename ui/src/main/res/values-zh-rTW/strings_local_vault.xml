@@ -24,4 +24,9 @@
     <string name="kdf_memory_must_be_between_x_and_y_mb">KDF 記憶體必須介於 %1$,d 到 %2$,d MB 之間。</string>
     <string name="kdf_parallelism_must_be_between_x_and_y">KDF 平行數量必須介於 %1$,d 到 %2$,d 之間。</string>
     <string name="your_encryption_key_settings_were_changed_on_another_device_try_again">您的加密金鑰設定已在其他裝置上變更，請再試一次。</string>
+    <string name="you_will_be_logged_out_of_this_device_desc_long">您將從此裝置登出，並需要以新的主密碼重新登入。共用密碼庫資料夾的其他裝置會在下次同步後登出。</string>
+    <string name="anyone_who_can_read_the_vault_folder_can_read_the_hint">任何能讀取密碼庫資料夾的人都能看到此提示。</string>
+    <string name="changing_your_master_password_does_not_lock_out_desc_long">變更主密碼並不能阻止知道舊主密碼的人存取您的密碼庫：密碼庫資料夾及其任何副本，仍可能保有以舊主密碼加密的密碼庫金鑰。若其他人可能知道您的主密碼，請改為匯出密碼庫、匯入至新帳號，然後刪除此帳號。</string>
+    <string name="your_new_master_password_cannot_be_the_same_as_your_current_one">新的主密碼不能與目前的主密碼相同。</string>
+    <string name="your_master_password_hint_cannot_be_the_same_as_your_master_password">主密碼提示不能與主密碼相同。</string>
 </resources>

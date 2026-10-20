@@ -17,6 +17,7 @@ import com.bitwarden.network.model.KdfTypeJson
 import com.bitwarden.network.model.MasterPasswordAuthenticationDataJson
 import com.bitwarden.network.model.MasterPasswordUnlockDataJson
 import com.bitwarden.network.model.PasswordHintResponseJson
+import com.bitwarden.network.model.ResetPasswordRequestJson
 import com.bitwarden.network.model.SyncResponseJson
 import com.bitwarden.network.model.UpdateCipherResponseJson
 import com.bitwarden.network.model.UpdateFolderResponseJson
@@ -30,6 +31,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -374,6 +376,59 @@ class LocalServiceClientTest {
             assertEquals(400, logIn(passwordHash = NEW_PASSWORD_HASH).code)
         }
 
+    @Test
+    fun `master password should be changed in the local vault along with the security stamp`() =
+        runTest {
+            val securityStamp = client.syncService.sync().getOrThrow().profile.securityStamp
+
+            client.accountsService.resetPassword(body = RESET_PASSWORD_REQUEST).getOrThrow()
+
+            val syncResponse = client.syncService.sync().getOrThrow()
+            // The new security stamp logs the account out of every device at its next sync.
+            assertNotEquals(securityStamp, syncResponse.profile.securityStamp)
+            assertEquals(NEW_USER_KEY, syncResponse.profile.key)
+            assertEquals(NEW_PASSWORD_HINT, syncResponse.profile.masterPasswordHint)
+            assertEquals(
+                MasterPasswordUnlockDataJson(
+                    salt = EMAIL,
+                    kdf = PBKDF2_KDF,
+                    masterKeyWrappedUserKey = NEW_USER_KEY,
+                ),
+                syncResponse.userDecryption?.masterPasswordUnlock,
+            )
+            assertEquals(400, logIn(passwordHash = PASSWORD_HASH).code)
+            assertEquals(200, logIn(passwordHash = NEW_PASSWORD_HASH).code)
+        }
+
+    @Test
+    fun `master password should not be changed with the hash of another master password`() =
+        runTest {
+            val result = client.accountsService.resetPassword(
+                body = RESET_PASSWORD_REQUEST.copy(currentPasswordHash = "mockOtherPasswordHash"),
+            )
+
+            assertTrue(requireNotNull(result.exceptionOrNull()).isBadRequest())
+            assertEquals(200, logIn(passwordHash = PASSWORD_HASH).code)
+            assertEquals(400, logIn(passwordHash = NEW_PASSWORD_HASH).code)
+        }
+
+    @Test
+    fun `master password should not be changed with other KDF settings than the account has`() =
+        runTest {
+            val result = client.accountsService.resetPassword(
+                body = RESET_PASSWORD_REQUEST.copy(
+                    authenticationData = RESET_PASSWORD_REQUEST
+                        .authenticationData
+                        .copy(kdf = ARGON2_KDF),
+                    unlockData = RESET_PASSWORD_REQUEST.unlockData.copy(kdf = ARGON2_KDF),
+                ),
+            )
+
+            assertTrue(requireNotNull(result.exceptionOrNull()).isBadRequest())
+            assertEquals(200, logIn(passwordHash = PASSWORD_HASH).code)
+            assertEquals(400, logIn(passwordHash = NEW_PASSWORD_HASH).code)
+        }
+
     /**
      * Logs in to the account with the [passwordHash] that the app derives from the master
      * password, as the app does when the user logs in.
@@ -422,6 +477,7 @@ class LocalServiceClientTest {
 private const val EMAIL = "test@example.com"
 private const val PASSWORD_HASH = "mockPasswordHash"
 private const val NEW_PASSWORD_HASH = "mockNewPasswordHash"
+private const val NEW_PASSWORD_HINT = "mockNewHint"
 private const val NEW_USER_KEY = "mockNewUserKey"
 private const val DEVICE_ID = "11111111-2222-4333-8444-555555555555"
 private const val STAND_IN_DEVICE_ID = "66666666-7777-4888-9999-000000000000"
@@ -433,6 +489,16 @@ private val ARGON2_KDF = KdfJson(
     iterations = 3,
     memory = 64,
     parallelism = 4,
+)
+
+/**
+ * The settings that the account is registered with.
+ */
+private val PBKDF2_KDF = KdfJson(
+    kdfType = KdfTypeJson.PBKDF2_SHA256,
+    iterations = 600_000,
+    memory = null,
+    parallelism = null,
 )
 
 /**
@@ -451,6 +517,24 @@ private val UPDATE_KDF_REQUEST = UpdateKdfJsonRequest(
     unlockData = MasterPasswordUnlockDataJson(
         salt = EMAIL,
         kdf = ARGON2_KDF,
+        masterKeyWrappedUserKey = NEW_USER_KEY,
+    ),
+)
+
+/**
+ * The request that the app changes the master password with, with the settings of the account.
+ */
+private val RESET_PASSWORD_REQUEST = ResetPasswordRequestJson(
+    currentPasswordHash = PASSWORD_HASH,
+    passwordHint = NEW_PASSWORD_HINT,
+    authenticationData = MasterPasswordAuthenticationDataJson(
+        kdf = PBKDF2_KDF,
+        masterPasswordAuthenticationHash = NEW_PASSWORD_HASH,
+        salt = EMAIL,
+    ),
+    unlockData = MasterPasswordUnlockDataJson(
+        salt = EMAIL,
+        kdf = PBKDF2_KDF,
         masterKeyWrappedUserKey = NEW_USER_KEY,
     ),
 )
