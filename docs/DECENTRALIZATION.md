@@ -79,7 +79,9 @@ deleted by hand: one that a client from before the `vault.json` that says that a
 deleted left behind (see "Building"), or one of which the directory of a device was deleted by
 hand. Its files tell such a directory as well: its `vault.json` is missing or says that it has
 version 2, and none of the files in its `devices` has `account` in its `records`, or none has
-`masterPassword` there.
+`masterPassword` there. An account whose `vault.json` still holds a whole vault of version 1
+fails the same way, and the warning says that its vault has the layout of version 1: no device
+took that vault over before the local vault stopped reading that layout (see "Building").
 
 The ID of the installation is `AppIdProvider.uniqueAppId`, the UUID that the app identifies itself
 to a Bitwarden server with. The local vault writes the changes of the app to a directory of the
@@ -328,16 +330,20 @@ NDK and no targets of Android.
 
 To change the local vault, change it in its own repository, where it is tested, and update the
 submodule here to that commit. The browser extension has the same submodule: a change to the
-format of the vault folder has to reach both before either of them writes it. Version 2, in which
-every device writes a directory of its own, is such a change. The first write of an updated
-client takes a vault of version 1 over, and from then on a client that knows only version 1 does
-not write the account, but does not have it either: its requests for the account are refused as
-unauthorized, which logs the account out; the email of the account is taken to belong to no
-account, so the master key is derived with the default KDF settings and the master password is
-taken to be wrong; and the email can be registered again, after which an updated client can log
-in to the new, empty account (`LOCAL_VAULT_FORMAT.md`, "Accounts with the same email address").
-So the app is released with such a change before the browser extension, or at the same time, and
-not after it: a browser can update the extension before the user has updated the app.
+format of the vault folder has to reach both before either of them writes it. A client of
+version 2 that gets a file of a later version fails the requests of the account, and those that
+look for an account by an email that no other account has, as ones that did not reach the server,
+until it is updated: it does not log the account out, take the master password to be wrong, or
+let the email be registered again. The account cannot be used on that client until then, so the
+app is released with such a change before the browser extension, or at the same time, and not
+after it: a browser can update the extension before the user has updated the app.
+
+Version 2, in which every device writes a directory of its own, was such a change. The first
+write of an updated client took a vault of version 1, which the `vault.json` of an account held
+whole, over into the file of its device. The local vault no longer reads version 1 since the
+commit "drop v1 support" of `local-vault-rs`: an account whose `vault.json` still holds such a
+vault fails the same way as one of a later version, until a build from before then takes it over
+(`LOCAL_VAULT_FORMAT.md`, "The earlier layout").
 
 The `vault.json` that says that an account was deleted (`LOCAL_VAULT_FORMAT.md`, "Deleting an
 account") is a change of the same kind, the other way round. A client from before it takes such
@@ -347,8 +353,7 @@ changed the vault while the deletion was on its way to it. An updated client tak
 for an account whose other files are still on their way, for good: its requests, and those for
 an email that no other account has, fail until the directory is deleted by hand. If the file that
 is left holds the records of the account and of its master password, as that of the device that
-took the vault of version 1 over does, the account is back instead, without the content of its
-attachments.
+registered the account does, the account is back instead, without the content of its attachments.
 
 ## Code map
 
