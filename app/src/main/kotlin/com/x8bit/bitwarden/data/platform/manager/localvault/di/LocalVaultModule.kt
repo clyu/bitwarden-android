@@ -4,11 +4,15 @@ import android.app.Application
 import android.content.SharedPreferences
 import com.bitwarden.core.data.manager.dispatcher.DispatcherManager
 import com.bitwarden.data.datasource.disk.di.UnencryptedPreferences
+import com.bitwarden.network.BitwardenServiceClient
 import com.bitwarden.network.local.LocalVaultCopier
 import com.bitwarden.network.local.LocalVaultCopierImpl
+import com.bitwarden.network.service.LocalVaultDevicesService
 import com.x8bit.bitwarden.data.auth.datasource.disk.AuthDiskSource
 import com.x8bit.bitwarden.data.platform.datasource.disk.LocalVaultDiskSource
 import com.x8bit.bitwarden.data.platform.datasource.disk.LocalVaultDiskSourceImpl
+import com.x8bit.bitwarden.data.platform.manager.localvault.LocalVaultDevicesManager
+import com.x8bit.bitwarden.data.platform.manager.localvault.LocalVaultDevicesManagerImpl
 import com.x8bit.bitwarden.data.platform.manager.localvault.LocalVaultStorageManager
 import com.x8bit.bitwarden.data.platform.manager.localvault.LocalVaultStorageManagerImpl
 import dagger.Module
@@ -52,5 +56,20 @@ object LocalVaultModule {
             localVaultCopier = localVaultCopier,
             appIdProvider = authDiskSource,
             dispatcherManager = dispatcherManager,
+        )
+
+    @Provides
+    @Singleton
+    fun provideLocalVaultDevicesService(
+        bitwardenServiceClient: BitwardenServiceClient,
+    ): LocalVaultDevicesService = bitwardenServiceClient.localVaultDevicesService
+
+    @Provides
+    @Singleton
+    fun provideLocalVaultDevicesManager(
+        localVaultDevicesService: LocalVaultDevicesService,
+    ): LocalVaultDevicesManager =
+        LocalVaultDevicesManagerImpl(
+            localVaultDevicesService = localVaultDevicesService,
         )
 }

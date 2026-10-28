@@ -884,6 +884,15 @@ class AccountSecurityViewModelTest : BaseViewModelTest() {
     }
 
     @Test
+    fun `on VaultDevicesClick should emit NavigateToVaultDevices`() = runTest {
+        val viewModel = createViewModel()
+        viewModel.eventFlow.test {
+            viewModel.trySendAction(AccountSecurityAction.VaultDevicesClick)
+            assertEquals(AccountSecurityEvent.NavigateToVaultDevices, awaitItem())
+        }
+    }
+
+    @Test
     fun `when ManageDevices flag updates, should update isManageDevicesEnabled state`() = runTest {
         val viewModel = createViewModel()
         mutableManageDevicesFlagFlow.emit(true)

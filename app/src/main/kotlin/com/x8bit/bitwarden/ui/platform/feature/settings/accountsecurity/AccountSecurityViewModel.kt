@@ -170,6 +170,7 @@ class AccountSecurityViewModel @Inject constructor(
         AccountSecurityAction.LogoutClick -> handleLogoutClick()
         AccountSecurityAction.ManageDevicesClick -> handleManageDevicesClick()
         AccountSecurityAction.PendingLoginRequestsClick -> handlePendingLoginRequestsClick()
+        AccountSecurityAction.VaultDevicesClick -> handleVaultDevicesClick()
         is AccountSecurityAction.VaultTimeoutTypeSelect -> handleVaultTimeoutTypeSelect(action)
         is AccountSecurityAction.CustomVaultTimeoutSelect -> handleCustomVaultTimeoutSelect(action)
         is AccountSecurityAction.VaultTimeoutActionSelect -> handleVaultTimeoutActionSelect(action)
@@ -369,6 +370,10 @@ class AccountSecurityViewModel @Inject constructor(
 
     private fun handleKdfSettingsClick() {
         sendEvent(AccountSecurityEvent.NavigateToKdfSettings)
+    }
+
+    private fun handleVaultDevicesClick() {
+        sendEvent(AccountSecurityEvent.NavigateToVaultDevices)
     }
 
     private fun handleInternalAction(action: AccountSecurityAction.Internal) {
@@ -731,6 +736,11 @@ sealed class AccountSecurityEvent {
      * Navigate to the encryption key settings screen.
      */
     data object NavigateToKdfSettings : AccountSecurityEvent()
+
+    /**
+     * Navigate to the screen with the devices that share the vault folder.
+     */
+    data object NavigateToVaultDevices : AccountSecurityEvent()
 }
 
 /**
@@ -789,6 +799,11 @@ sealed class AccountSecurityAction {
      * User clicked encryption key settings.
      */
     data object KdfSettingsClick : AccountSecurityAction()
+
+    /**
+     * User clicked the devices that share the vault folder.
+     */
+    data object VaultDevicesClick : AccountSecurityAction()
 
     /**
      * User clicked lock now.

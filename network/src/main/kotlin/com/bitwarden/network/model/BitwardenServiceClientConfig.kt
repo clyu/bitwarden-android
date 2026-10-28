@@ -15,6 +15,9 @@ import java.time.Clock
  *
  * @property localVaultFileSystem Where the vault is kept on the device. When set, there is no
  * Bitwarden server: everything it would have been asked is answered from this vault instead.
+ * @property localVaultDeviceName The name of the device that the files of the vault say, or `null`
+ * for its model, which is the name that the app gives a Bitwarden server as it logs in. Reading
+ * the model needs Android, which a unit test does not have.
  */
 data class BitwardenServiceClientConfig(
     val clientData: ClientData,
@@ -27,6 +30,7 @@ data class BitwardenServiceClientConfig(
     val clock: Clock,
     val enableHttpBodyLogging: Boolean = false,
     val localVaultFileSystem: LocalVaultFileSystem? = null,
+    val localVaultDeviceName: String? = null,
 ) {
     /**
      * Models data about the client application.

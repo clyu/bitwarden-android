@@ -39,6 +39,8 @@ import com.bitwarden.network.service.HaveIBeenPwnedService
 import com.bitwarden.network.service.HaveIBeenPwnedServiceImpl
 import com.bitwarden.network.service.IdentityService
 import com.bitwarden.network.service.IdentityServiceImpl
+import com.bitwarden.network.service.LocalVaultDevicesService
+import com.bitwarden.network.service.LocalVaultDevicesServiceImpl
 import com.bitwarden.network.service.NewAuthRequestService
 import com.bitwarden.network.service.NewAuthRequestServiceImpl
 import com.bitwarden.network.service.OrganizationService
@@ -47,6 +49,7 @@ import com.bitwarden.network.service.PushService
 import com.bitwarden.network.service.PushServiceImpl
 import com.bitwarden.network.service.SendsServiceImpl
 import com.bitwarden.network.service.SyncServiceImpl
+import com.bitwarden.network.util.DeviceModelProvider
 import kotlinx.serialization.json.Json
 import retrofit2.create
 
@@ -95,6 +98,8 @@ internal class BitwardenServiceClientImpl(
                     fileSystem = it,
                     clock = bitwardenServiceClientConfig.clock,
                     deviceId = bitwardenServiceClientConfig.appIdProvider.uniqueAppId,
+                    deviceName = bitwardenServiceClientConfig.localVaultDeviceName
+                        ?: DeviceModelProvider().deviceModel,
                 )
             },
         )
@@ -185,6 +190,12 @@ internal class BitwardenServiceClientImpl(
         IdentityServiceImpl(
             unauthenticatedIdentityApi = retrofits.unauthenticatedIdentityRetrofit.create(),
             json = clientJson,
+        )
+    }
+
+    override val localVaultDevicesService: LocalVaultDevicesService by lazy {
+        LocalVaultDevicesServiceImpl(
+            localVaultDevicesApi = retrofits.authenticatedApiRetrofit.create(),
         )
     }
 

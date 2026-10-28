@@ -29,4 +29,18 @@
     <string name="changing_your_master_password_does_not_lock_out_desc_long">Changing your master password does not lock out someone who knows the old one: the vault folder, and any copy of it, can still hold the key of your vault encrypted with the old master password. If someone else may know your master password, export your vault, import it into a new account, and delete this account instead.</string>
     <string name="your_new_master_password_cannot_be_the_same_as_your_current_one">Your new master password cannot be the same as your current one.</string>
     <string name="your_master_password_hint_cannot_be_the_same_as_your_master_password">Your master password hint cannot be the same as your master password.</string>
+    <string name="devices_sharing_the_vault_folder">Devices sharing the vault folder</string>
+    <string name="each_device_that_shares_the_vault_folder_keeps_its_changes_desc_long">Each device that shares the vault folder keeps its changes in a folder of its own there, named after the ID of the device. Retire a device that will not be used again, such as this app before its data was cleared: this device takes over what it kept, and its folder is deleted after 90 days. A device that is still used, but only to fill in passwords, may not have changed the vault for a long time either: tell the devices apart by their types and names.</string>
+    <string name="this_device">This device</string>
+    <string name="retired">Retired</string>
+    <string name="last_changed_the_vault_on_x">Last changed the vault on %1$s</string>
+    <string name="has_not_changed_the_vault">Has not changed the vault</string>
+    <string name="retired_on_x_its_folder_is_deleted_after_y_unless_it_is_used_again">Retired on %1$s. Its folder is deleted after %2$s, unless it is used again.</string>
+    <string name="retired_on_x_from_another_device_no_longer_retired_once_it_syncs">Retired on %1$s from another device. This device is no longer retired once it syncs, within a day.</string>
+    <string name="retire">Retire</string>
+    <string name="retire_this_device">Retire this device?</string>
+    <string name="retire_a_device_only_if_it_will_not_be_used_again_desc_long">Retire a device only if it will not be used again. This device takes over what it kept in the vault folder, and its folder there is deleted after 90 days. If it is still in use, it is no longer retired once it syncs, within a day. Devices with an earlier version of the app cannot open this vault until they are updated.</string>
+    <string name="retiring_device">Retiring device…</string>
+    <string name="device_retired">Device retired</string>
+    <string name="the_file_of_the_device_has_not_fully_come_to_this_device_yet">The file of the device has not fully come to this device yet. Try again later.</string>
 </resources>
