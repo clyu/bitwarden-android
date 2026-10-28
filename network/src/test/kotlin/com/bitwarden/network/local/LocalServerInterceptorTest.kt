@@ -19,6 +19,7 @@ class LocalServerInterceptorTest {
         fileSystem = FileLocalVaultFileSystem(root = root),
         clock = Clock.fixed(Instant.parse("2026-10-11T12:00:00Z"), ZoneOffset.UTC),
         deviceId = "11111111-2222-4333-8444-555555555555",
+        deviceName = "mockDeviceName",
     )
 
     @AfterEach

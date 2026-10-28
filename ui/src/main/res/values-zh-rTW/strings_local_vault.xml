@@ -29,4 +29,18 @@
     <string name="changing_your_master_password_does_not_lock_out_desc_long">變更主密碼並不能阻止知道舊主密碼的人存取您的密碼庫：密碼庫資料夾及其任何副本，仍可能保有以舊主密碼加密的密碼庫金鑰。若其他人可能知道您的主密碼，請改為匯出密碼庫、匯入至新帳號，然後刪除此帳號。</string>
     <string name="your_new_master_password_cannot_be_the_same_as_your_current_one">新的主密碼不能與目前的主密碼相同。</string>
     <string name="your_master_password_hint_cannot_be_the_same_as_your_master_password">主密碼提示不能與主密碼相同。</string>
+    <string name="devices_sharing_the_vault_folder">共用密碼庫資料夾的裝置</string>
+    <string name="each_device_that_shares_the_vault_folder_keeps_its_changes_desc_long">共用密碼庫資料夾的每台裝置，都會把自己的變更存放在該資料夾中以裝置 ID 命名的資料夾。請退役不會再使用的裝置，例如清除資料之前的此應用程式：此裝置會接手它保存的內容，它的資料夾則會在 90 天後刪除。仍在使用、但只用來自動填入密碼的裝置，也可能很久沒有變更密碼庫：請依類型與名稱分辨各裝置。</string>
+    <string name="this_device">此裝置</string>
+    <string name="retired">已退役</string>
+    <string name="last_changed_the_vault_on_x">最後於 %1$s 變更密碼庫</string>
+    <string name="has_not_changed_the_vault">尚未變更密碼庫</string>
+    <string name="retired_on_x_its_folder_is_deleted_after_y_unless_it_is_used_again">已於 %1$s 退役。除非它再次被使用，它的資料夾會在 %2$s 之後刪除。</string>
+    <string name="retired_on_x_from_another_device_no_longer_retired_once_it_syncs">已於 %1$s 由另一台裝置退役。此裝置在同步後就不再是退役狀態，最多需要一天。</string>
+    <string name="retire">退役</string>
+    <string name="retire_this_device">要退役這台裝置嗎？</string>
+    <string name="retire_a_device_only_if_it_will_not_be_used_again_desc_long">請只退役不會再使用的裝置。此裝置會接手它在密碼庫資料夾中保存的內容，它在該處的資料夾則會在 90 天後刪除。如果它仍在使用中，它在同步後就不再是退役狀態，最多需要一天。使用舊版應用程式的裝置必須更新後才能開啟此密碼庫。</string>
+    <string name="retiring_device">正在退役裝置…</string>
+    <string name="device_retired">裝置已退役</string>
+    <string name="the_file_of_the_device_has_not_fully_come_to_this_device_yet">該裝置的檔案尚未完整同步到此裝置，請稍後再試。</string>
 </resources>

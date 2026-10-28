@@ -56,6 +56,7 @@ class AccountSecurityScreenTest : BitwardenComposeTest() {
     private var onNavigateToManageDevicesCalled = false
     private var onNavigateToKdfSettingsCalled = false
     private var onNavigateToChangeMasterPasswordCalled = false
+    private var onNavigateToVaultDevicesCalled = false
 
     private val intentManager = mockk<IntentManager> {
         every { launchUri(any()) } just runs
@@ -101,6 +102,7 @@ class AccountSecurityScreenTest : BitwardenComposeTest() {
                 onNavigateToChangeMasterPassword = {
                     onNavigateToChangeMasterPasswordCalled = true
                 },
+                onNavigateToVaultDevices = { onNavigateToVaultDevicesCalled = true },
                 viewModel = viewModel,
             )
         }
@@ -1816,6 +1818,21 @@ class AccountSecurityScreenTest : BitwardenComposeTest() {
         mutableStateFlow.update { it.copy(isUnlockWithPasswordEnabled = false) }
 
         composeTestRule.onNodeWithText(rowText).assertDoesNotExist()
+    }
+
+    @Test
+    fun `on NavigateToVaultDevices event should call onNavigateToVaultDevices`() {
+        mutableEventFlow.tryEmit(AccountSecurityEvent.NavigateToVaultDevices)
+        assertTrue(onNavigateToVaultDevicesCalled)
+    }
+
+    @Test
+    fun `on devices sharing the vault folder click should send VaultDevicesClick action`() {
+        composeTestRule
+            .onNodeWithText("Devices sharing the vault folder")
+            .performScrollTo()
+            .performClick()
+        verify { viewModel.trySendAction(AccountSecurityAction.VaultDevicesClick) }
     }
 }
 

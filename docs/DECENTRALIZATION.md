@@ -94,10 +94,11 @@ keeps it in its own storage, which the backup rules of the app leave out (`backu
 its own. Clearing the data of the app, or uninstalling it and installing it
 again, gives it a new ID, and updating it does not. Where the vault is in a folder that the user
 chose, the directory of the one before then stays in it, and must not be deleted by hand, as part
-of the vault may be only in it; the storage of the app, which has the vault otherwise, is emptied
-along with the ID. As nothing writes that directory anymore, it can also keep the user key
-encrypted with the master password of that time for good, so changing the master password is not
-enough if someone else may know the old one (DESIGN.md, "Limits to keep in mind").
+of the vault may be only in it: retire it instead (see "Retiring a device"); the storage of the
+app, which has the vault otherwise, is emptied along with the ID. As nothing writes that
+directory anymore, it also keeps the user key encrypted with the master password of that time
+until 90 days after it is retired, so changing the master password is not enough if someone else
+may know the old one (DESIGN.md, "Limits to keep in mind").
 
 ## The vault folder
 
@@ -243,6 +244,40 @@ A new master password does not lock out whoever knows the old one: the vault fol
 of it, can still hold the user key encrypted with the master key of the old one (DESIGN.md, "Limits
 to keep in mind"). The screen says so, and what to do if someone else may know the master password.
 
+## Retiring a device
+
+Settings › Account security › Devices sharing the vault folder lists the devices that have a file in
+the vault of the account: the installations of the app and of the browser extension that share the
+vault folder, by their types and their names, and the ID that names their directory, with when each
+last changed the vault, and this one first (`.../accountsecurity/vaultdevices/`). The type and the
+name are those that the client names its device by to a Bitwarden server as it logs in:
+"Mobile - Android" and the model of the phone for the app (`DeviceModelProvider`), and the type of
+the extension, such as "Extension - Chrome", and the browser for the extension, as upstream shows
+them (`.../managedevices/util/DeviceTypeExtensions.kt`). They tell a device that is still used, but
+only to fill in passwords, from one that is gone for good, as neither has changed the vault for a
+long time. The files of a device say them once it changed the vault, or synced, with this version of
+the app or of the extension: until then, it is listed as an unknown device. Upstream has a screen of
+devices of its own, which lists those that a Bitwarden server knows, behind a feature flag that is
+off; this one is a row of its own, and is not behind it. The local vault answers what the screen
+asks for (`GET local-vault/devices` and `POST local-vault/devices/{id}/retire`), through
+`LocalVaultDevicesService`, which the app has from `BitwardenServiceClient` like the other services,
+and `LocalVaultDevicesManager`.
+
+A device that will not be used again, such as this app before its data was cleared, is retired
+there: this device takes its file over into its own, the vault is put together without it from
+then on, and the first device that syncs 90 days later deletes its directory
+(`docs/LOCAL_VAULT_FORMAT.md` of `local-vault-rs`, "Retiring a device"). The vault stays the same.
+Until then, the device is listed as retired, with the date that its directory is deleted after. A
+device that turns out to be still in use is no longer retired once it changes the vault, or syncs a
+day or more after it last looked through its file for what other devices replaced, which it also
+does at its first sync after the app starts, and keeps what it changed: the screen says "within a
+day" for that. A device whose newer file has not fully come to this one yet is not retired, and the
+screen says to try again later. So does it for a device that stopped for good while it wrote its
+file, or whose file a tool that syncs the folder damaged, which can never be retired: its directory
+stays, with what it holds, as that of a device that is gone for good did before devices could be
+retired. Once a device of an account was retired, a device that has a version of the app or of the
+browser extension from before cannot use the account until it is updated.
+
 ## Making sure nothing reaches a real server
 
 The measures of the local vault apply (see "Making sure nothing reaches a real server" in
@@ -276,7 +311,8 @@ Everything else is new: the files in the directories of the code map below, the 
 |------|--------|
 | `network/build.gradle.kts` | Builds the local vault from the submodule, adds it to every variant, and depends on JNA. |
 | `gradle/libs.versions.toml` | JNA. |
-| `network/.../BitwardenServiceClientImpl.kt`, `network/.../model/BitwardenServiceClientConfig.kt` | `localVaultFileSystem`: setting it is what turns the local server on. The local server is given `appIdProvider.uniqueAppId` as the ID of the device. |
+| `network/.../BitwardenServiceClientImpl.kt`, `network/.../model/BitwardenServiceClientConfig.kt` | `localVaultFileSystem`: setting it is what turns the local server on. The local server is given `appIdProvider.uniqueAppId` as the ID of the device, and the model of the device as its name (`DeviceModelProvider`), unless `localVaultDeviceName` gives another one, as the tests do, which cannot read the model. |
+| `network/.../BitwardenServiceClient.kt`, `network/.../BitwardenServiceClientImpl.kt` | `localVaultDevicesService`, the devices that share the vault folder. |
 | `network/.../retrofit/RetrofitsImpl.kt` | Installs `LocalServerInterceptor` on each HTTP client. |
 | `app/.../datasource/network/di/PlatformNetworkModule.kt` | Hands the file system and `LocalBaseUrlsProvider` to the network layer. |
 | `app/.../auth/datasource/disk/AuthDiskSourceImpl.kt` | `uniqueAppId` is made under a lock, as it names the directory that the local vault writes the changes of the app to. |
@@ -284,7 +320,7 @@ Everything else is new: the files in the directories of the code map below, the 
 | `app/.../ui/platform/feature/settings/other/` | The setting for the vault folder. |
 | `app/.../ui/auth/feature/landing/LandingScreen.kt`, `.../startregistration/StartRegistrationScreen.kt`, `.../login/LoginScreen.kt`, `.../vaultunlock/VaultUnlockScreen.kt`, and their tests | Logging in on the device: no server is named, and the landing screen and the screen for creating an account have no selector of the environment. |
 | `ui/.../components/account/BitwardenAccountSwitcher.kt`, `.../account/dialog/BitwardenLogoutConfirmationDialog.kt`, `.../account/dialog/BitwardenRemovalConfirmationDialog.kt`, `ui/src/testFixtures/.../BitwardenAccountSwitcherTestHelpers.kt` | The account switcher and its dialogs name no environment. |
-| `app/.../ui/platform/feature/settings/accountsecurity/AccountSecurityScreen.kt`, `.../AccountSecurityViewModel.kt`, `.../AccountSecurityNavigation.kt`, `.../settings/SettingsNavigation.kt`, and the tests of the first two | The row of the encryption key settings, and the route to their screen (`.../accountsecurity/kdfsettings/`). The row that changes the master password opens the screen of this fork (`.../accountsecurity/changemasterpassword/`) instead of the web vault. |
+| `app/.../ui/platform/feature/settings/accountsecurity/AccountSecurityScreen.kt`, `.../AccountSecurityViewModel.kt`, `.../AccountSecurityNavigation.kt`, `.../settings/SettingsNavigation.kt`, and the tests of the first two | The row of the encryption key settings, and the route to their screen (`.../accountsecurity/kdfsettings/`). The row of the devices that share the vault folder, and the route to their screen (`.../accountsecurity/vaultdevices/`). The row that changes the master password opens the screen of this fork (`.../accountsecurity/changemasterpassword/`) instead of the web vault. |
 | `app/.../auth/repository/AuthRepositoryImpl.kt`, and its test | `validatePassword` checks the master password against the user key when the hash that it keeps is that of other KDF settings than the ones the vault was unlocked with. |
 | `.github/workflows/android.yml` | Builds the local vault with the app, and runs the tests of the local vault and those of the parts of the app that this fork changed. |
 
@@ -363,7 +399,7 @@ registered the account does, the account is back instead, without the content of
 | `network/build.gradle.kts` | Builds the local vault and generates its Kotlin. |
 | `network/src/main/kotlin/com/bitwarden/network/local/` | `LocalServer`, which hands requests to the local vault, the interceptor, the file-system interface and its implementation on ordinary files, the copy of the accounts, and of the files of the app in the accounts that the other folder has, to another folder (`LocalVaultCopier`), and how a request fails that the local vault refused (`isBadRequest`). |
 | `network/.../retrofit/RetrofitsImpl.kt` | Where the interceptor is installed on each HTTP client. |
-| `app/src/main/kotlin/com/x8bit/bitwarden/data/platform/manager/localvault/` | The vault folder: the manager, the implementation of the file system on a folder the user chose, and the addresses that cannot be reached. |
+| `app/src/main/kotlin/com/x8bit/bitwarden/data/platform/manager/localvault/` | The vault folder: the manager, the implementation of the file system on a folder the user chose, and the addresses that cannot be reached. The devices that share it, and retiring one of them (`LocalVaultDevicesManager`). |
 | `app/.../datasource/network/di/PlatformNetworkModule.kt` | Where the app hands the file system and the addresses to the network layer. |
 | `app/.../manager/network/NetworkConnectionManagerImpl.kt` | The network that is always connected. |
 | `app/.../ui/platform/feature/settings/other/` | The setting for the vault folder. |
@@ -371,4 +407,6 @@ registered the account does, the account is back instead, without the content of
 | `app/.../ui/platform/feature/settings/accountsecurity/kdfsettings/` | The screen of the encryption key settings. |
 | `app/.../data/auth/manager/MasterPasswordManager.kt`, `MasterPasswordManagerImpl.kt`, `.../manager/di/MasterPasswordManagerModule.kt`, `.../manager/model/ChangeMasterPasswordResult.kt` | Changing the master password. |
 | `app/.../ui/platform/feature/settings/accountsecurity/changemasterpassword/` | The screen that changes the master password. |
+| `network/.../api/LocalVaultDevicesApi.kt`, `network/.../service/LocalVaultDevicesService.kt`, `LocalVaultDevicesServiceImpl.kt`, `network/.../model/LocalVaultDeviceJson.kt`, `LocalVaultDevicesResponseJson.kt` | The requests for the devices that share the vault folder, which only the local vault answers. |
+| `app/.../ui/platform/feature/settings/accountsecurity/vaultdevices/` | The screen of the devices that share the vault folder, which retires one of them. |
 | `network/src/test/kotlin/com/bitwarden/network/local/` | Tests of the local server as the app uses it: through the interceptor, with the API services of the app, for every request that the app can make, for its feature flags, and for its file system. How the local server behaves is tested in `local-vault-rs`. |

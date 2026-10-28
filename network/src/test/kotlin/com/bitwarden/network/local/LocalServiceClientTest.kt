@@ -9,6 +9,7 @@ import com.bitwarden.network.model.AuthTokenData
 import com.bitwarden.network.model.BitwardenServiceClientConfig
 import com.bitwarden.network.model.CreateCipherInOrganizationJsonRequest
 import com.bitwarden.network.model.CreateCipherResponseJson
+import com.bitwarden.network.model.DeviceType
 import com.bitwarden.network.model.FolderJsonRequest
 import com.bitwarden.network.model.GetCipherResponse
 import com.bitwarden.network.model.GetTokenResponseJson
@@ -42,6 +43,7 @@ import java.nio.file.Files
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
+import java.time.temporal.ChronoUnit
 
 /**
  * Tests that the services the app talks to a Bitwarden server with are answered from the local
@@ -62,6 +64,7 @@ class LocalServiceClientTest {
         fileSystem = fileSystem,
         clock = clock,
         deviceId = STAND_IN_DEVICE_ID,
+        deviceName = STAND_IN_DEVICE_NAME,
     )
 
     private var authTokenData: AuthTokenData? = null
@@ -91,6 +94,7 @@ class LocalServiceClientTest {
             permissionProvider = mockk(),
             clock = clock,
             localVaultFileSystem = fileSystem,
+            localVaultDeviceName = DEVICE_NAME,
         ),
         json = json,
     )
@@ -265,6 +269,38 @@ class LocalServiceClientTest {
             emptyList<SyncResponseJson.Folder>(),
             client.syncService.sync().getOrThrow().folders,
         )
+    }
+
+    @Test
+    fun `devices should be listed, and one that is gone for good retired`() = runTest {
+        // The device that registered the account is gone for good, and this one changed the vault.
+        val folder = client
+            .folderService
+            .createFolder(body = FolderJsonRequest(name = "mockFolderName-1"))
+            .getOrThrow()
+
+        val devices = client.localVaultDevicesService.getDevices().getOrThrow()
+        val retired = client
+            .localVaultDevicesService
+            .retireDevice(deviceId = STAND_IN_DEVICE_ID)
+            .getOrThrow()
+        val refused = client.localVaultDevicesService.retireDevice(deviceId = DEVICE_ID)
+
+        assertEquals(
+            listOf(DEVICE_ID to true, STAND_IN_DEVICE_ID to false),
+            devices.map { it.id to it.isCurrentDevice },
+        )
+        assertEquals(
+            listOf(DEVICE_NAME to DeviceType.ANDROID, STAND_IN_DEVICE_NAME to DeviceType.ANDROID),
+            devices.map { it.name to it.type },
+        )
+        assertEquals(STAND_IN_DEVICE_ID, retired.id)
+        assertEquals(STAND_IN_DEVICE_NAME, retired.name)
+        assertEquals(clock.instant(), retired.retiredDate)
+        assertEquals(clock.instant().plus(90, ChronoUnit.DAYS), retired.removalDate)
+        assertTrue(refused.exceptionOrNull()?.isBadRequest() == true)
+        // This device took over the records of the account, which the other one held.
+        assertEquals(listOf(folder), client.syncService.sync().getOrThrow().folders)
     }
 
     @Test
@@ -481,6 +517,8 @@ private const val NEW_PASSWORD_HINT = "mockNewHint"
 private const val NEW_USER_KEY = "mockNewUserKey"
 private const val DEVICE_ID = "11111111-2222-4333-8444-555555555555"
 private const val STAND_IN_DEVICE_ID = "66666666-7777-4888-9999-000000000000"
+private const val DEVICE_NAME = "mockDeviceName-1"
+private const val STAND_IN_DEVICE_NAME = "mockDeviceName-2"
 
 private val ATTACHMENT_CONTENT = byteArrayOf(1, 2, 3)
 

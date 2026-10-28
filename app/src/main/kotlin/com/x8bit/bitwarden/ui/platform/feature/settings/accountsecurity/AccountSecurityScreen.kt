@@ -89,6 +89,7 @@ fun AccountSecurityScreen(
     onNavigateToManageDevices: () -> Unit,
     onNavigateToKdfSettings: () -> Unit,
     onNavigateToChangeMasterPassword: () -> Unit,
+    onNavigateToVaultDevices: () -> Unit,
     viewModel: AccountSecurityViewModel = hiltViewModel(),
     biometricsManager: BiometricsManager = LocalBiometricsManager.current,
     intentManager: IntentManager = LocalIntentManager.current,
@@ -125,6 +126,8 @@ fun AccountSecurityScreen(
             is AccountSecurityEvent.NavigateToManageDevices -> onNavigateToManageDevices()
 
             AccountSecurityEvent.NavigateToKdfSettings -> onNavigateToKdfSettings()
+
+            AccountSecurityEvent.NavigateToVaultDevices -> onNavigateToVaultDevices()
 
             is AccountSecurityEvent.ShowBiometricsPrompt -> {
                 showBiometricsPrompt = true
@@ -389,6 +392,17 @@ fun AccountSecurityScreen(
                         .fillMaxWidth(),
                 )
             }
+            // The devices that share the vault folder, which the local vault lists, and one of
+            // which can be retired once it is gone for good.
+            BitwardenTextRow(
+                text = stringResource(id = BitwardenString.devices_sharing_the_vault_folder),
+                onClick = { viewModel.trySendAction(AccountSecurityAction.VaultDevicesClick) },
+                cardStyle = CardStyle.Middle(),
+                modifier = Modifier
+                    .testTag("VaultDevicesLabel")
+                    .standardHorizontalMargin()
+                    .fillMaxWidth(),
+            )
             if (state.isUnlockWithPasswordEnabled) {
                 // The master password is changed in the app, as this fork has no web vault.
                 BitwardenTextRow(

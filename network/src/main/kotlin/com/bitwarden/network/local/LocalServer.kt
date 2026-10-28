@@ -33,6 +33,12 @@ internal const val HTTP_INTERNAL_ERROR: Int = 500
 private const val JSON_MEDIA_TYPE: String = "application/json"
 
 /**
+ * The type of the device that the app names it by to a Bitwarden server as it logs in
+ * (`IdentityServiceImpl`): Android.
+ */
+private const val DEVICE_TYPE_ANDROID: Int = 0
+
+/**
  * A request to the [LocalServer], as the HTTP client of the app has it. What it asks for is
  * worked out by the local vault.
  *
@@ -71,17 +77,20 @@ internal class LocalResponse(
  *
  * The work is done by the local vault in Rust (the submodule `local-vault-rs`), which the other
  * clients that share a vault folder use as well. This only hands it the requests, the vault
- * folder, the clock and the ID of this installation of the app, and streams the content of
- * attachments, which does not pass through it.
+ * folder, the clock, the ID of this installation of the app and the name of the device, and
+ * streams the content of attachments, which does not pass through it.
  *
  * The local vault writes the changes of the app to a directory of the vault folder named after
  * [deviceId], which no other device writes, and puts the vault together from the directories of
- * every device that shares the folder.
+ * every device that shares the folder. The files of the device say that it is an Android device
+ * named [deviceName], which is what the app names it to a Bitwarden server as it logs in, so that
+ * the devices that share the folder can be told apart.
  */
 internal class LocalServer(
     private val fileSystem: LocalVaultFileSystem,
     private val clock: Clock,
     private val deviceId: String,
+    private val deviceName: String,
 ) {
     /**
      * The local vault, which loads its library the first time that it is needed.
@@ -92,6 +101,8 @@ internal class LocalServer(
             platform = PlatformCallback(clock = clock),
             client = VaultClientKind.ANDROID,
             deviceId = deviceId,
+            deviceName = deviceName,
+            deviceType = DEVICE_TYPE_ANDROID,
         )
     }
 

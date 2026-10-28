@@ -23,6 +23,8 @@ import com.x8bit.bitwarden.ui.platform.feature.settings.accountsecurity.changema
 import com.x8bit.bitwarden.ui.platform.feature.settings.accountsecurity.kdfsettings.kdfSettingsDestination
 import com.x8bit.bitwarden.ui.platform.feature.settings.accountsecurity.kdfsettings.navigateToKdfSettings
 import com.x8bit.bitwarden.ui.platform.feature.settings.accountsecurity.navigateToAccountSecurity
+import com.x8bit.bitwarden.ui.platform.feature.settings.accountsecurity.vaultdevices.navigateToVaultDevices
+import com.x8bit.bitwarden.ui.platform.feature.settings.accountsecurity.vaultdevices.vaultDevicesDestination
 import com.x8bit.bitwarden.ui.platform.feature.settings.appearance.appearanceDestination
 import com.x8bit.bitwarden.ui.platform.feature.settings.appearance.navigateToAppearance
 import com.x8bit.bitwarden.ui.platform.feature.settings.autofill.autoFillDestination
@@ -161,11 +163,14 @@ fun NavGraphBuilder.settingsGraph(
             onNavigateToManageDevices = onNavigateToManageDevices,
             onNavigateToKdfSettings = { navController.navigateToKdfSettings() },
             onNavigateToChangeMasterPassword = { navController.navigateToChangeMasterPassword() },
+            onNavigateToVaultDevices = { navController.navigateToVaultDevices() },
         )
         // The encryption key settings of this fork, which upstream has only in the web vault.
         kdfSettingsDestination(onNavigateBack = { navController.popBackStack() })
         // Changing the master password, which upstream leaves to the web vault.
         changeMasterPasswordDestination(onNavigateBack = { navController.popBackStack() })
+        // The devices that share the vault folder, one of which can be retired.
+        vaultDevicesDestination(onNavigateBack = { navController.popBackStack() })
         appearanceDestination(
             isPreAuth = false,
             onNavigateBack = { navController.popBackStack() },

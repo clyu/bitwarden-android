@@ -20,6 +20,7 @@ import com.bitwarden.network.service.FillAssistService
 import com.bitwarden.network.service.FolderService
 import com.bitwarden.network.service.HaveIBeenPwnedService
 import com.bitwarden.network.service.IdentityService
+import com.bitwarden.network.service.LocalVaultDevicesService
 import com.bitwarden.network.service.NewAuthRequestService
 import com.bitwarden.network.service.OrganizationService
 import com.bitwarden.network.service.PushService
@@ -127,6 +128,11 @@ interface BitwardenServiceClient {
      * Provides access to the Identity service.
      */
     val identityService: IdentityService
+
+    /**
+     * Provides access to the devices that share the vault folder of the local vault.
+     */
+    val localVaultDevicesService: LocalVaultDevicesService
 
     /**
      * Provides access to the New Authentication Request service.
