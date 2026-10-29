@@ -193,6 +193,7 @@ jobs:
             --tests "com.x8bit.bitwarden.ui.platform.feature.settings.accountsecurity.vaultdevices.*" \
             --tests "com.x8bit.bitwarden.data.auth.manager.KdfSettingsManagerTest" \
             --tests "com.x8bit.bitwarden.data.auth.manager.MasterPasswordManagerTest" \
+            --tests "com.x8bit.bitwarden.data.auth.manager.UserLogoutManagerTest" \
             --tests "com.x8bit.bitwarden.data.auth.repository.AuthRepositoryTest.validatePassword*" \
             --tests "com.x8bit.bitwarden.data.platform.manager.network.NetworkConnectionManagerTest" \
             --tests "com.x8bit.bitwarden.data.platform.manager.localvault.*" \

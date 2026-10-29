@@ -114,17 +114,26 @@ internal class UserLogoutManagerImpl(
                 )
             }
         }
-        authDiskSource.apply {
-            storeEncryptedPin(userId = userId, encryptedPin = encryptedPin)
-            storePinProtectedUserKey(userId = userId, pinProtectedUserKey = pinProtectedUserKey)
-            storeEphemeralPinProtectedUserKeyEnvelope(
-                userId = userId,
-                pinProtectedUserKeyEnvelope = ephemeralPinProtectedUserKeyEnvelope,
-            )
-            storePersistentPinProtectedUserKeyEnvelope(
-                userId = userId,
-                pinProtectedUserKeyEnvelope = persistentPinProtectedUserKeyEnvelope,
-            )
+        // The local vault refuses a refresh token only once the user key of the account was
+        // rotated on another device, or once the account is gone. The PIN then unlocks the user
+        // key before, which nothing may be written with: it is not kept, and has to be set again
+        // once the account is logged in to with the new master password.
+        if (reason != LogoutReason.InvalidGrant) {
+            authDiskSource.apply {
+                storeEncryptedPin(userId = userId, encryptedPin = encryptedPin)
+                storePinProtectedUserKey(
+                    userId = userId,
+                    pinProtectedUserKey = pinProtectedUserKey,
+                )
+                storeEphemeralPinProtectedUserKeyEnvelope(
+                    userId = userId,
+                    pinProtectedUserKeyEnvelope = ephemeralPinProtectedUserKeyEnvelope,
+                )
+                storePersistentPinProtectedUserKeyEnvelope(
+                    userId = userId,
+                    pinProtectedUserKeyEnvelope = persistentPinProtectedUserKeyEnvelope,
+                )
+            }
         }
     }
 
