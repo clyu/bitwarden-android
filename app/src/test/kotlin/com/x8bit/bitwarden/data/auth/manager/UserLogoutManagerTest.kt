@@ -299,6 +299,44 @@ class UserLogoutManagerTest {
         }
     }
 
+    @Test
+    fun `softLogout for an invalid grant should clear the PIN and restore the rest`() {
+        val userId = USER_ID_1
+        setupSoftLogoutStubs(userId = userId)
+
+        userLogoutManager.softLogout(userId = userId, reason = LogoutReason.InvalidGrant)
+
+        assertDataCleared(userId = userId)
+        verify(exactly = 1) {
+            settingsDiskSource.storeVaultTimeoutInMinutes(
+                userId = userId,
+                vaultTimeoutInMinutes = 360,
+            )
+            settingsDiskSource.storeVaultTimeoutAction(
+                userId = userId,
+                vaultTimeoutAction = VaultTimeoutAction.LOGOUT,
+            )
+        }
+        // The PIN unlocks the user key from before a rotation, which the local vault refuses the
+        // refresh token of.
+        verify(exactly = 0) {
+            authDiskSource.storeEncryptedPin(userId = any(), encryptedPin = any())
+            authDiskSource.storePinProtectedUserKey(
+                userId = any(),
+                pinProtectedUserKey = any(),
+                inMemoryOnly = any(),
+            )
+            authDiskSource.storeEphemeralPinProtectedUserKeyEnvelope(
+                userId = any(),
+                pinProtectedUserKeyEnvelope = any(),
+            )
+            authDiskSource.storePersistentPinProtectedUserKeyEnvelope(
+                userId = any(),
+                pinProtectedUserKeyEnvelope = any(),
+            )
+        }
+    }
+
     @Suppress("MaxLineLength")
     @Test
     fun `softLogout when shouldClearOnSoftLogout is true should not restore the vault policy banner dismissed date`() {

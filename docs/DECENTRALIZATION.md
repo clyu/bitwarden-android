@@ -242,7 +242,42 @@ has the user try again.
 
 A new master password does not lock out whoever knows the old one: the vault folder, and any copy
 of it, can still hold the user key encrypted with the master key of the old one (DESIGN.md, "Limits
-to keep in mind"). The screen says so, and what to do if someone else may know the master password.
+to keep in mind"). The screen says so, and what to do if someone else may know the master password:
+change it in the browser extension, and rotate the user key there along with it (below).
+
+## A rotation of the user key on another device
+
+The app does not rotate the user key. Upstream does that in the web vault only, and the client of
+the SDK that does it (`user_crypto_management()`) sends its requests itself, which do not reach
+the local vault here (see "Changing how the master key is derived"). The browser extension does it,
+along with a change of the master password (`docs/DESIGN.md` of `local-vault-rs`, "Rotating the
+user key", and `apps/browser/src/local-vault/README.md` of the extension): a new user key, with
+which the private key of the account, every item and every folder are encrypted again, and which
+the new master password unlocks.
+
+The app takes such a rotation with one change of its own. Once it has come to the device in the
+vault folder, the local vault refuses the tokens that it issued before it: the next request of the
+app is answered with a 401, and the refresh token that the app then asks for another token with is
+refused (`invalid_grant`), which logs the account out, as upstream does when a session ends
+(`AuthTokenManager`, `AuthRepositoryImpl.refreshAccessTokenSynchronously`). The app thus writes
+nothing with the user key before, which it still has, and the new master password logs in to the
+account with the new key.
+
+That logout is a soft one, after which upstream keeps the PIN: the user key encrypted with it,
+which is the key before. Kept, it would unlock the account to that key once the account is locked
+again, after it was logged in to with the new master password, and the app would write with that
+key, with a token that the local vault takes: an item that it then adds or changes cannot be
+decrypted with the new key, but can be with an earlier master password. So a soft logout for an
+`invalid_grant` does not keep the PIN (`UserLogoutManagerImpl.softLogout`), which has to be set
+again. The local vault refuses a refresh token only for a rotation, or for an account that it no
+longer has, as its tokens do not expire. The browser extension logs out for good in that case,
+which does not keep the PIN either.
+
+What the app changes before the rotation comes to it is lost, and an item that it adds then cannot
+be decrypted with the new key: the files of the vault say with which key each version was written,
+and one of the key before never replaces one of the new key. A version of the app whose local vault
+does not know of rotated keys cannot use the account once its key was rotated, until it is updated
+(see "Building").
 
 ## Retiring a device
 
@@ -322,6 +357,7 @@ Everything else is new: the files in the directories of the code map below, the 
 | `ui/.../components/account/BitwardenAccountSwitcher.kt`, `.../account/dialog/BitwardenLogoutConfirmationDialog.kt`, `.../account/dialog/BitwardenRemovalConfirmationDialog.kt`, `ui/src/testFixtures/.../BitwardenAccountSwitcherTestHelpers.kt` | The account switcher and its dialogs name no environment. |
 | `app/.../ui/platform/feature/settings/accountsecurity/AccountSecurityScreen.kt`, `.../AccountSecurityViewModel.kt`, `.../AccountSecurityNavigation.kt`, `.../settings/SettingsNavigation.kt`, and the tests of the first two | The row of the encryption key settings, and the route to their screen (`.../accountsecurity/kdfsettings/`). The row of the devices that share the vault folder, and the route to their screen (`.../accountsecurity/vaultdevices/`). The row that changes the master password opens the screen of this fork (`.../accountsecurity/changemasterpassword/`) instead of the web vault. |
 | `app/.../auth/repository/AuthRepositoryImpl.kt`, and its test | `validatePassword` checks the master password against the user key when the hash that it keeps is that of other KDF settings than the ones the vault was unlocked with. |
+| `app/.../auth/manager/UserLogoutManagerImpl.kt`, and its test | `softLogout` does not keep the PIN when the refresh token was refused (`invalid_grant`), which the local vault does once the user key was rotated on another device, as the PIN unlocks the key before (see "A rotation of the user key on another device"). |
 | `.github/workflows/android.yml` | Builds the local vault with the app, and runs the tests of the local vault and those of the parts of the app that this fork changed. |
 
 ## Updating from upstream
@@ -373,6 +409,11 @@ until it is updated: it does not log the account out, take the master password t
 let the email be registered again. The account cannot be used on that client until then, so the
 app is released with such a change before the browser extension, or at the same time, and not
 after it: a browser can update the extension before the user has updated the app.
+
+Rotating the user key is such a change as well: the file of the device that rotates it, and every
+file that a device writes with the new key, is of version 4 (`LOCAL_VAULT_FORMAT.md`, "Rotating the
+user key"), which a client from before cannot read. It cannot use the account until it is updated,
+and nothing else goes wrong there.
 
 Version 2, in which every device writes a directory of its own, was such a change. The first
 write of an updated client took a vault of version 1, which the `vault.json` of an account held
